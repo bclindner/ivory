@@ -14,11 +14,10 @@ try:
 except Exception:
     print("failed to open cookies file; manual login required")
 
-print(config)
 instance_url = config['instance_url']
 # Attempt Mastodon log-in
 if len(cookies) > 0:
-    driver = browser.login_with_cookies(instance_url)
+    driver = browser.login_with_cookies(instance_url, cookies)
 else:
     email = input('Enter email: ')
     password = getpass(prompt='Enter password: ')

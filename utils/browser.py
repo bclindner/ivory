@@ -27,6 +27,7 @@ def login_with_cookies(instanceURL, cookies):
     driver.get(instanceURL)
     for cookie in cookies:
         driver.add_cookie(cookie)
+    return driver
 def login_with_credentials(instanceURL, email, password, otp=""):
     """
     Login to the given instance using user credentials.
