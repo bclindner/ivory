@@ -44,7 +44,7 @@ def login_with_credentials(instanceURL, email, password, otp=""):
     pwfield.send_keys(password)
     pwfield.submit()
     # server needs a sec to catch up
-    # TODO change this to an implicit wait
+    # TODO change this to an explicit wait
     time.sleep(1)
     # otp
     if len(otp) > 0:
@@ -52,7 +52,7 @@ def login_with_credentials(instanceURL, email, password, otp=""):
         otpfield.send_keys(otp)
         otpfield.submit()
         # server needs a sec to catch up
-        # TODO change this to an implicit wait
+        # TODO change this to an explicit wait
         time.sleep(1)
     # grab cookies
     cookies = driver.get_cookies()
