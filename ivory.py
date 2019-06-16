@@ -65,7 +65,15 @@ while True:
         completed_reports.append(report_id)
         print("Handling report #%s..." % report_id)
         # Get the report and make judgement
-        report = get_report(report_id)
+        report = browser.get_report(report_id)
+        # If we've already resolved this report from an earlier judgement, pass
+
+        # NOTE this is a bad idea; we need to group reports by user in case a user
+        # makes a huge infraction then a small one so they can't get off the
+        # hook
+        if report.status == "Resolved":
+            print('Report #%s is already resolved, skipping...' % report_id)
+            continue
         punishment, rules_broken = judge.make_judgement(report)
         # Punish if necessary
         if punishment:

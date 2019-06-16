@@ -3,6 +3,6 @@ class User:
         self.id = user_id
         self.username = username
     def __repr__(self):
-        return "User %s (@%s)" % self.id, self.username
+        return "User %s (@%s)" % (self.id, self.username)
     def __str__(self):
         return self.username

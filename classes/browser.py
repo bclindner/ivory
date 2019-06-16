@@ -70,9 +70,6 @@ class IvoryBrowser:
         # Parse the report from the page itself
         self.__driver.get(self.__url('/admin/reports/') + report_id)
         self.__wait.until(EC.title_contains('Report #'+report_id))
-        report = {
-            "id": report_id
-        }
         # Get report status
         report_status = self.__driver.find_element_by_xpath('//table[1]//tr[5]/td[1]').text
         # Get reported user
@@ -114,17 +111,16 @@ class IvoryBrowser:
     def suspend_user(self, user_id, report_id, delete_account_data=True, message=""):
         self.__driver.get(self.__url('/admin/accounts/218050/action/new?report_id=%s&type=suspend' % report_id))
         self.__driver.find_element_by_class_name('btn').click()
-        pass
+        # Hope this works
+        self.__wait.until(EC.title_contains('Reports -'))
     def silence_user(self, user_id, report_id="", message=""):
-        # TODO
+        self.__driver.get(self.__url('/admin/accounts/218050/action/new?report_id=%s&type=silence' % report_id))
         pass
     def warn_user(self, user_id, report_id="", message=""):
-        # TODO
+        self.__driver.get(self.__url('/admin/accounts/218050/action/new?report_id=%s&type=none' % report_id))
         pass
     def punish_user(self, report, punishment):
         if punishment.type == 'suspend':
-            print("Suspend")
-            exit(1)
             self.suspend_user(report.reported.id, report.id)
         else:
             print("Punishment type", punishment.type, "not implemented.")
