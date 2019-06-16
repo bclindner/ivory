@@ -12,7 +12,7 @@ class Judge:
         for rule in self.rules:
             if rule.test(report):
                 rules_broken.add(rule)
-                if most_severe_rule is None or most_severe_rule['severity'] < rule['severity']:
+                if most_severe_rule is None or most_severe_rule.punishment.severity < rule.punishment.severity:
                     most_severe_rule = rule
         if most_severe_rule is not None:
             final_verdict = most_severe_rule.punishment

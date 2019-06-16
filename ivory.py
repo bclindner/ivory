@@ -23,6 +23,8 @@ for rule_config in config['rules']:
         judge.add_rule(rules.MessageContentRule(rule_config))
     elif rule_type == 'link':
         judge.add_rule(rules.LinkContentRule(rule_config))
+    elif rule_type == 'link_redir':
+        judge.add_rule(rules.LinkResolverRule(rule_config))
     else:
         print("Invalid config! Couldn't find a rule with type:", rule_type)
         print("Exiting.")

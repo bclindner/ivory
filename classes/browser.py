@@ -10,6 +10,8 @@ from urllib.parse import urljoin
 from .report import Report
 from .user import User
 
+import time
+
 class IvoryBrowser:
     def __init__(self, instanceURL, defaultTimeout=10):
         self.instanceURL = instanceURL
@@ -109,10 +111,12 @@ class IvoryBrowser:
             buttons[1].click()
         self.__wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'notice')))
     def suspend_user(self, user_id, report_id, delete_account_data=True, message=""):
-        self.__driver.get(self.__url('/admin/accounts/218050/action/new?report_id=%s&type=suspend' % report_id))
+        self.__driver.get(self.__url('/admin/reports/') + report_id)
+        self.__wait.until(EC.title_contains('Report #'+report_id))
+        self.__driver.find_element_by_xpath('//div[@class="content"]/div[1]/div[1]/a[2]').click()
+        self.__wait.until(EC.title_contains('Perform moderation'))
         self.__driver.find_element_by_class_name('btn').click()
-        # Hope this works
-        self.__wait.until(EC.title_contains('Reports -'))
+        self.__wait.until(EC.title_contains('Reports'))
     def silence_user(self, user_id, report_id="", message=""):
         self.__driver.get(self.__url('/admin/accounts/218050/action/new?report_id=%s&type=silence' % report_id))
         pass
