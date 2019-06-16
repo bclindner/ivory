@@ -44,18 +44,19 @@ Ivory is configured using a YAML file. An example configuration is below:
 # Instance URL
 instance_url: https://mastodon.technology
 # Time to wait in between checks (in seconds)
-wait_time: 300
+wait_time: 600 # 10min
 # Array of rules for Ivory to judge with
 rules:
   # This name is what Ivory mentions in the moderation notes when finishing a
   # report.
-- name: "No womenarestupid.site spam"
+- name: "No womenarestupid.site spam links"
   # This rule parses over links in every post attached to a report.
   # Also supports text phrases in reported posts with the 'content' type.
   type: link
   blocked:
   # This list supports regexes!
   - womenarestupid.site
+  - dontmarry.com
   punishment:
     # The highest severity punishment in a single judgement is the one used when
     # punishing the user.
@@ -63,6 +64,17 @@ rules:
     # Currently only suspend is supported.
     type: suspend
     # Not implemented, but the following are for local users.
+    delete_account_data: yes
+    local_suspend_message: "Your account has been suspended for spamming."
+- name: "No womenarestupid.site shorturls"
+  # This one resolves shorturls!
+  type: link_redir
+  blocked:
+  - dontmarry.com
+  - womenarestupid.site
+  punishment:
+    severity: 1000
+    type: suspend
     delete_account_data: yes
     local_suspend_message: "Your account has been suspended for spamming."
 ```
