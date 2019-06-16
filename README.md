@@ -13,8 +13,11 @@ releases.
 
 ## Installation and Usage
 
-This snippet should work. You'll want Python 3 (preferably 3.7 or above) for
-this:
+First, install Geckodriver and make sure it's in your terminal's PATH. If you're
+running Linux, you may have a version in your distro's package manager.
+
+After doing that, snippet should work. You'll want Python 3 (preferably 3.7 or
+above) for this:
 
 ```bash
 git clone https://github.com/bclindner/ivory
