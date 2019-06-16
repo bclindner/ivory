@@ -6,19 +6,56 @@ common moderation tasks, particularly spam. It does this by reading over each
 report it finds and running a number of configuration-declared *rules* which are
 checked on each report.
 
+Currently, Ivory is intended to function as a stopgap measure to curb spam while
+we await the actual moderation API, though I have intentionally designed things
+in a way that will allow me to convert it to use said API when (or if) it
+releases.
+
+## Installation and Usage
+
+This snippet should work. You'll want Python 3 (preferably 3.7 or above) for
+this:
+
+```bash
+git clone https://github.com/bclindner/ivory
+cd ivory
+python -m venv .
+source bin/activate
+pip install -r requirements.txt
+```
+
+After that, create a config as shown in the section below and then run:
+
+```bash
+python ivory.py
+```
+
 ## Configuring
 
 Ivory is configured using a YAML file. An example configuration is below:
 ```yaml
+# Instance URL
 instance_url: https://mastodon.technology
+# Time to wait in between checks (in seconds)
+wait_time: 300
+# Array of rules for Ivory to judge with
 rules:
+  # This name is what Ivory mentions in the moderation notes when finishing a
+  # report.
 - name: "No womenarestupid.site spam"
+  # This rule parses over links in every post attached to a report.
+  # Also supports text phrases in reported posts with the 'content' type.
   type: link
   blocked:
+  # This list supports regexes!
   - womenarestupid.site
   punishment:
+    # The highest severity punishment in a single judgement is the one used when
+    # punishing the user.
     severity: 1000
+    # Currently only suspend is supported.
     type: suspend
+    # Not implemented, but the following are for local users.
     delete_account_data: yes
     local_suspend_message: "Your account has been suspended for spamming."
 ```
@@ -27,6 +64,13 @@ rules:
 
 This code is using Selenium to drive its report handling system. Selenium can be
 finicky. Stuff can break.
+
+I also haven't coded this immaculately - as previously mentioned, this is a
+stopgap measure, coded in a day to curb spam on my instance. There is every
+possibility I'm making a mistake here.
+
+Take care when writing your rules. Ivory doesn't care if you get them wrong.
+Support for dry runs will come available when I get to it.
 
 ## Maintainers
 
