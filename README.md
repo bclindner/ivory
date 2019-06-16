@@ -24,11 +24,18 @@ source bin/activate
 pip install -r requirements.txt
 ```
 
-After that, create a config as shown in the section below and then run:
+After that, create a config.yml in the project root as shown in the Configuring
+section below and then run:
 
 ```bash
 python ivory.py
 ```
+
+You will be asked for a username and password, and optionally an OTP if your
+account is set up for that. This should only happen once; after that, cookies
+are stored in the project root as `cookies.pickle` and the app will log in with
+those. (If at some point Ivory stops signing in correctly, delete this file and
+try manually logging in again.)
 
 ## Configuring
 
