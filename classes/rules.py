@@ -1,24 +1,24 @@
 import re
+from .rule import Rule
+from .report import Report
 
-class MessageContentRule:
+class MessageContentRule(Rule):
     def __init__(self, config):
-        self.name = config['name']
-        self.punishment = config['punishment']
+        Rule.__init__(self, config)
         self.blocked = config['blocked']
-    def test(self, report):
-        for post in report['posts']:
-            for regex in blocked:
+    def test(self, report: Report):
+        for post in report.posts:
+            for regex in self.blocked:
                 if re.search(regex, post):
                     return True
         return False
 
-class LinkContentRule:
+class LinkContentRule(Rule):
     def __init__(self, config):
-        self.name = config['name']
-        self.punishment = config['punishment']
+        Rule.__init__(self, config)
         self.blocked = config['blocked']
-    def test(self, report):
-        for link in report['links']:
+    def test(self, report: Report):
+        for link in report.links:
             for regex in self.blocked:
                 if re.search(regex, link):
                     return True
