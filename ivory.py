@@ -32,6 +32,7 @@ class Ivory:
             rules_config = config['rules']
         except KeyError:
             print("ERROR: Couldn't find any rules in config.yml!")
+            exit(1)
         rulecount = 1
         for rule_config in rules_config:
             try:
@@ -42,6 +43,7 @@ class Ivory:
                 rulecount += 1
             except ModuleNotFoundError:
                 print("ERROR: Rule #%d not found!" % rulecount)
+                exit(1)
             except Exception as err:
                 print("Failed to initialize rule #%d!" % rulecount)
                 raise err
@@ -55,6 +57,7 @@ class Ivory:
             exit(1)
         except ModuleNotFoundError:
             print("ERROR: Driver not found!")
+            exit(1)
         except Exception as err:
             print("ERROR: Failed to initialize driver!")
             raise err
