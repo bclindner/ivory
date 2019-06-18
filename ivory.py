@@ -37,7 +37,7 @@ class Ivory:
             try:
                 # programmatically load rule based on type in config
                 rule_type = rule_config['type']
-                Rule = import_module('rules.' + rule_type).rule
+                Rule = import_module('rules.' + rule_type).Rule
                 self.judge.add_rule(Rule(rule_config))
                 rulecount += 1
             except Exception as err:
@@ -47,10 +47,10 @@ class Ivory:
             driver_config = config['driver']
             try:
                 # programmatically load driver based on type in config
-                driver = import_module('drivers.' + driver_config['type'])
+                Driver = import_module('drivers.' + driver_config['type']).driver
             except ImportError:
                 raise NotImplementedError()
-            self.driver = driver.Driver(driver_config)
+            self.driver = Driver(driver_config)
         except KeyError:
             print("ERROR: Driver configuration not found in config.yml!")
             exit(1)

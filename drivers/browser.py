@@ -12,18 +12,18 @@ from selenium.webdriver.support import expected_conditions as EC
 # NoElementFoundException, which we use to handle some potential fault areas
 from selenium.common.exceptions import NoSuchElementException
 # Ivory imports
-from core import Report, IvoryDriver, User
+from core import Report, Driver, User
 
 # Default timeout for the Selenium driver to get a Web page.
 DEFAULT_TIMEOUT = 30
 
-class Driver(IvoryDriver):
+class BrowserDriver(Driver):
     """
     A Selenium-based browser driver for Ivory.
     """
 
     def __init__(self, config):
-        IvoryDriver.__init__(self)
+        Driver.__init__(self)
         try:
             self.instance_url = config['instance_url']
         except KeyError:
@@ -188,3 +188,5 @@ class Driver(IvoryDriver):
         self.__wait.until(EC.title_contains('Perform moderation'))
         self.__driver.find_element_by_class_name('btn').click()
         self.__wait.until(EC.title_contains('Reports'))
+
+driver = BrowserDriver

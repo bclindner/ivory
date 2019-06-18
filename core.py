@@ -145,7 +145,7 @@ class Judge:
         return (final_verdict, rules_broken)
 
 
-class IvoryDriver:
+class Driver:
     """
     A dummy Ivory driver to derive your own custom drivers from.
 
