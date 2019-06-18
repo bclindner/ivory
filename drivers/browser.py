@@ -80,16 +80,16 @@ class BrowserDriver(Driver):
         pwfield = self.__driver.find_element_by_id("user_password")
         pwfield.send_keys(password)
         pwfield.submit()
-        # Server needs a sec to catch up
-        self.__wait.until(EC.title_contains('Reports'))
         # OTP
         # TODO NON-OTP IS UNTESTED
         if otp:
+            # Server needs a sec to catch up
+            self.__wait.until(EC.presence_of_element_located((By.ID, 'user_otp_attempt')))
             otpfield = self.__driver.find_element_by_id('user_otp_attempt')
             otpfield.send_keys(otp)
             otpfield.submit()
-            # Server needs a sec to catch up
-            self.__wait.until(EC.url_contains('getting-started'))
+        # Server needs a sec to catch up
+        self.__wait.until(EC.url_contains('getting-started'))
         # Grab cookies
         cookies = self.__driver.get_cookies()
         return cookies
@@ -188,3 +188,5 @@ class BrowserDriver(Driver):
         self.__wait.until(EC.title_contains('Perform moderation'))
         self.__driver.find_element_by_class_name('btn').click()
         self.__wait.until(EC.title_contains('Reports'))
+
+driver = BrowserDriver
