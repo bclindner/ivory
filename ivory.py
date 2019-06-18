@@ -1,10 +1,10 @@
+from importlib import import_module
 import traceback
 import time
 from typing import List
 
 import yaml
 
-from drivers.browser import BrowserDriver as BrowserDriver
 import rules
 from core import Judge
 
@@ -35,27 +35,22 @@ class Ivory:
         rulecount = 1
         for rule_config in rules_config:
             try:
-                # FIXME this type switch suckssss
-                if rule_config['type'] == "content":
-                    self.judge.add_rule(rules.MessageContentRule(rule_config))
-                elif rule_config['type'] == "link":
-                    self.judge.add_rule(rules.LinkContentRule(rule_config))
-                elif rule_config['type'] == "link_redir":
-                    self.judge.add_rule(rules.LinkResolverRule(rule_config))
-                elif rule_config['type'] == "username":
-                    self.judge.add_rule(rules.UsernameContentRule(rule_config))
-                else:
-                    raise NotImplementedError()
+                # programmatically load rule based on type in config
+                rule_type = rule_config['type']
+                Rule = import_module('rules.' + rule_type).rule
+                self.judge.add_rule(Rule(rule_config))
                 rulecount += 1
             except Exception as err:
                 print("Failed to initialize rule #%d!" % rulecount)
                 raise err
         try:
             driver_config = config['driver']
-            if driver_config['type'] == "browser":
-                self.driver = BrowserDriver(driver_config)
-            else:
+            try:
+                # programmatically load driver based on type in config
+                driver = import_module('drivers.' + driver_config['type'])
+            except ImportError:
                 raise NotImplementedError()
+            self.driver = driver.Driver(driver_config)
         except KeyError:
             print("ERROR: Driver configuration not found in config.yml!")
             exit(1)
