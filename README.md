@@ -44,10 +44,12 @@ try manually logging in again.)
 
 Ivory is configured using a YAML file. An example configuration is below:
 ```yaml
-# Instance URL
-instance_url: https://mastodon.technology
 # Time to wait in between checks (in seconds)
-wait_time: 600 # 10min
+wait_time: 600 # 10min; lower numbers shouldn't stress your servers out
+driver:
+  type: browser # browser is the only supported driver type at present
+  # Instance URL
+  instance_url: https://mastodon.technology
 # Array of rules for Ivory to judge with
 rules:
   # This name is what Ivory mentions in the moderation notes when finishing a
@@ -70,7 +72,7 @@ rules:
     delete_account_data: yes
     local_suspend_message: "Your account has been suspended for spamming."
 - name: "No womenarestupid.site shorturls"
-  # This one resolves shorturls!
+  # This rule type resolves shorturls!
   type: link_redir
   blocked:
   - dontmarry.com
@@ -80,6 +82,16 @@ rules:
     type: suspend
     delete_account_data: yes
     local_suspend_message: "Your account has been suspended for spamming."
+- name: "No inflammatory usernames"
+  type: username
+  blocked:
+  # You can do case insensitive searches using regex, too!
+  - (?i)heck
+  punishment:
+    severity: 1000
+    type: suspend
+    delete_account_data: yes
+    local_suspend_message: "Your account has been suspended for having an inflammatory username."
 ```
 
 ## Caveats
@@ -87,11 +99,8 @@ rules:
 This code is using Selenium to drive its report handling system. Selenium can be
 finicky. Stuff can break.
 
-I also haven't coded this immaculately - as previously mentioned, this is a
-stopgap measure, coded in a day to curb spam on my instance. There is every
-possibility I'm making a mistake here.
-
-Take care when writing your rules. Ivory doesn't care if you get them wrong.
+Take care when writing your rules. Ivory doesn't care if you get them wrong, and
+Ivory will absolutely ban users with impunity if you do. Test them if you can.
 Support for dry runs will come available when I get to it.
 
 ## Maintainers
