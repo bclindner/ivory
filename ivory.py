@@ -1,91 +1,104 @@
-from classes.browser import IvoryBrowser
-from classes.judge import Judge
-import classes.rules as rules
-
-from getpass import getpass
+import traceback
 import time
+from typing import List
+
 import yaml
-import pickle
 
+from drivers.browser import BrowserDriver as BrowserDriver
+import rules
+from core import Judge
 
-try:
-    with open('config.yml') as config_yml:
-        config = yaml.load(config_yml, Loader=yaml.Loader)
-except:
-    print("Failed to open config file!")
-    print("Exiting.")
-    exit(1)
+class Ivory:
+    """
+    The core class for the Ivory automoderation system.
+    In practice, you really only need to import this and a driver to get it
+    running.
+    """
+    handled_reports: List[str] = []
 
-judge = Judge()
-for rule_config in config['rules']:
-    rule_type = rule_config['type']
-    if rule_type == 'content':
-        judge.add_rule(rules.MessageContentRule(rule_config))
-    elif rule_type == 'link':
-        judge.add_rule(rules.LinkContentRule(rule_config))
-    elif rule_type == 'link_redir':
-        judge.add_rule(rules.LinkResolverRule(rule_config))
-    else:
-        print("Invalid config! Couldn't find a rule with type:", rule_type)
-        print("Exiting.")
-        exit(1)
+    def __init__(self):
+        # get config file
+        try:
+            with open('config.yml') as config_file:
+                config = yaml.load(config_file, Loader=yaml.Loader)
+        except OSError:
+            print("Failed to open config.yml!")
+            exit(1)
+        self.debug_mode = config.get('debug_mode', False)
+        self.wait_time = config.get('wait_time', 300)
+        # parse rules first; fail early and all that
+        self.judge = Judge()
+        try:
+            rules_config = config['rules']
+        except KeyError:
+            print("ERROR: Couldn't find any rules in config.yml!")
+        rulecount = 1
+        for rule_config in rules_config:
+            try:
+                # FIXME this type switch suckssss
+                if rule_config['type'] == "content":
+                    self.judge.add_rule(rules.MessageContentRule(rule_config))
+                elif rule_config['type'] == "link":
+                    self.judge.add_rule(rules.LinkContentRule(rule_config))
+                elif rule_config['type'] == "link_redir":
+                    self.judge.add_rule(rules.LinkResolverRule(rule_config))
+                elif rule_config['type'] == "username":
+                    self.judge.add_rule(rules.UsernameContentRule(rule_config))
+                else:
+                    raise NotImplementedError()
+                rulecount += 1
+            except Exception as err:
+                print("Failed to initialize rule #%d!" % rulecount)
+                raise err
+        try:
+            driver_config = config['driver']
+            if driver_config['type'] == "browser":
+                self.driver = BrowserDriver(driver_config)
+            else:
+                raise NotImplementedError()
+        except KeyError:
+            print("ERROR: Driver configuration not found in config.yml!")
+            exit(1)
+        except Exception as err:
+            print("ERROR: Failed to initialize driver!")
+            raise err
 
-# get cookies if we can
-cookies = []
-try:
-    with open('cookies.pickle', 'rb') as cookies_file:
-        cookies = pickle.load(cookies_file)
-    print('Found cookies; using those instead of asking you for login')
-except:
-    print("Failed to open cookies file; manual login required")
+    def handle_reports(self):
+        """
+        Get reports from the driver, and judge and punish each one accordingly.
+        """
+        reports_to_check = self.driver.get_unresolved_report_ids()
+        for report_id in reports_to_check:
+            if report_id in self.handled_reports:
+                print("Report #%s skipped" % report_id)
+                continue
+            print("Handling report #%s..." % report_id)
+            report = self.driver.get_report(report_id)
+            (final_verdict, rules_broken) = self.judge.make_judgement(report)
+            if final_verdict:
+                self.driver.punish(report, final_verdict)
+                rules_broken_str = ', '.join(
+                    [str(rule) for rule in rules_broken])  # lol
+                note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
+            else:
+                note = "Ivory has scanned this report and found no infractions."
+            self.driver.add_note(report.report_id, note)
+            self.handled_reports.append(report_id)
 
-browser = IvoryBrowser(config['instance_url'])
-# Attempt Mastodon log-in
-if len(cookies) > 0:
-    driver = browser.login_with_cookies(cookies)
-    print('Looks like login was successful.')
-else:
-    email = input('Enter email: ')
-    password = getpass(prompt='Enter password: ')
-    otp = input('If using OTP, enter OTP token: ')
-    driver, cookies = browser.login_with_credentials(email, password, otp)
-    print('Looks like login was successful. Saving cookies...')
-    with open('cookies.pickle', 'wb') as cookies_file:
-        pickle.dump(cookies, cookies_file)
+    def run(self):
+        """
+        Runs the Ivory automoderator main loop.
+        """
+        while True:
+            print('Running report pass...')
+            try:
+                self.handle_reports()
+            except Exception as err:
+                print("Unexpected error handling reports!")
+                if self.debug_mode:
+                    raise err
+            print('Report pass complete.')
+            time.sleep(self.wait_time)
 
-# Cache report IDs to prevent making judgement multiple times
-completed_reports = []
-
-while True:
-    print("Starting pass...")
-    report_ids = browser.get_report_ids()
-    for report_id in report_ids:
-        # Skip if report ID is already completed, and add it to the list if not
-        if report_id in completed_reports:
-            print("Already did #%s, skipping..." % report_id)
-            continue
-        completed_reports.append(report_id)
-        print("Handling report #%s..." % report_id)
-        # Get the report and make judgement
-        report = browser.get_report(report_id)
-        # If we've already resolved this report from an earlier judgement, pass
-
-        # NOTE this is a bad idea; we need to group reports by user in case a user
-        # makes a huge infraction then a small one so they can't get off the
-        # hook
-        if report.status == "Resolved":
-            print('Report #%s is already resolved, skipping...' % report_id)
-            continue
-        punishment, rules_broken = judge.make_judgement(report)
-        # Punish if necessary
-        if punishment:
-            browser.punish_user(report, punishment)
-            rule_names = [rule.name for rule in rules_broken]
-            rule_names_pretty = ', '.join(rule_names)
-            # Notify about punishment
-            browser.add_note(report.id, "Ivory has punished this user for breaking rules: "+rule_names_pretty)
-        else:
-            # Note 0 rule violations
-            browser.add_note(report.id, "Ivory found no rule violations.")
-    print("Pass complete. Waiting for next pass...")
-    time.sleep(config['wait_time'])
+if __name__ == '__main__':
+    Ivory().run()
