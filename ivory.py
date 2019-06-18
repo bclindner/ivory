@@ -40,20 +40,21 @@ class Ivory:
                 Rule = import_module('rules.' + rule_type).Rule
                 self.judge.add_rule(Rule(rule_config))
                 rulecount += 1
+            except ModuleNotFoundError:
+                print("ERROR: Rule #%d not found!" % rulecount)
             except Exception as err:
                 print("Failed to initialize rule #%d!" % rulecount)
                 raise err
         try:
             driver_config = config['driver']
-            try:
-                # programmatically load driver based on type in config
-                Driver = import_module('drivers.' + driver_config['type']).driver
-            except ImportError:
-                raise NotImplementedError()
+            # programmatically load driver based on type in config
+            Driver = import_module('drivers.' + driver_config['type']).driver
             self.driver = Driver(driver_config)
         except KeyError:
             print("ERROR: Driver configuration not found in config.yml!")
             exit(1)
+        except ModuleNotFoundError:
+            print("ERROR: Driver not found!")
         except Exception as err:
             print("ERROR: Failed to initialize driver!")
             raise err
