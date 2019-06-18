@@ -57,7 +57,7 @@ rules:
 - name: "No womenarestupid.site spam links"
   # This rule parses over links in every post attached to a report.
   # Also supports text phrases in reported posts with the 'content' type.
-  type: link
+  type: link_content
   blocked:
   # This list supports regexes!
   - womenarestupid.site
@@ -73,7 +73,7 @@ rules:
     local_suspend_message: "Your account has been suspended for spamming."
 - name: "No womenarestupid.site shorturls"
   # This rule type resolves shorturls!
-  type: link_redir
+  type: link_resolver
   blocked:
   - dontmarry.com
   - womenarestupid.site
@@ -83,7 +83,7 @@ rules:
     delete_account_data: yes
     local_suspend_message: "Your account has been suspended for spamming."
 - name: "No inflammatory usernames"
-  type: username
+  type: username_content
   blocked:
   # You can do case insensitive searches using regex, too!
   - (?i)heck
