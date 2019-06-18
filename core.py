@@ -2,13 +2,6 @@
 Base classes for the Ivory system.
 """
 from typing import List
-import re
-import time
-import traceback
-import yaml
-import requests
-
-import drivers
 
 
 class User:
@@ -30,6 +23,9 @@ class User:
 class Report:
     """
     A class representation of a Mastodon report.
+
+    Since reports from other instances won't have accounts attached, drivers
+    cannot create reporter users, so they should just set the reporter field to None.
     """
 
     def __init__(self,
@@ -194,141 +190,3 @@ class Driver:
         """
         raise NotImplementedError()
 
-class LinkContentRule(Rule):
-    """
-    A rule which checks for banned link content.
-    """
-    def __init__(self, config):
-        Rule.__init__(self, config)
-        self.blocked = config['blocked']
-    def test(self, report: Report):
-        """
-        Test if a post's links matches any of the given blocked regexes.
-        """
-        for link in report.links:
-            for regex in self.blocked:
-                if re.search(regex, link):
-                    return True
-        return False
-
-class LinkResolverRule(Rule):
-    """
-    A rule which checks for banned links, resolving links to prevent shorturl
-    mitigation.
-    """
-    def __init__(self, config):
-        Rule.__init__(self, config)
-        self.blocked = config['blocked']
-    def test(self, report: Report):
-        for link in report.links:
-            response = requests.head(link, allow_redirects=True)
-            resolved_url = response.url
-            for regex in self.blocked:
-                if re.search(regex, resolved_url):
-                    return True
-        return False
-
-class MessageContentRule(Rule):
-    def __init__(self, config):
-        Rule.__init__(self, config)
-        self.blocked = config['blocked']
-    def test(self, report: Report):
-        """
-        Test if a post matches any of the given blocked regexes.
-        """
-        for post in report.posts:
-            for regex in self.blocked:
-                if re.search(regex, post):
-                    return True
-        return False
-
-class Ivory:
-    """
-    The core class for the Ivory automoderation system.
-    In practice, you really only need to import this and a driver to get it
-    running.
-    """
-    handled_reports: List[str] = []
-
-    def __init__(self):
-        # get config file
-        try:
-            with open('config.yml') as config_file:
-                config = yaml.load(config_file)
-        except OSError:
-            print("Failed to open config.yml!")
-            exit(1)
-        try:
-            self.wait_time = config['wait_time']
-        except KeyError:
-            print("No wait time specified, using 5min...")
-            self.wait_time = 300
-        # parse rules first; fail early and all that
-        self.judge = Judge()
-        try:
-            rules_config = config['rules']
-        except KeyError:
-            print("ERROR: Couldn't find any rules in config.yml!")
-        rulecount = 1
-        for rule_config in rules_config:
-            try:
-                # FIXME this type switch suckssss
-                if rule_config['type'] == "content":
-                    self.judge.add_rule(MessageContentRule(rule_config))
-                elif rule_config['type'] == "link":
-                    self.judge.add_rule(LinkContentRule(rule_config))
-                elif rule_config['type'] == "link_redir":
-                    self.judge.add_rule(LinkResolverRule(rule_config))
-                else:
-                    raise NotImplementedError()
-                rulecount += 1
-            except err:
-                print("Failed to initialize rule #%d!" % rulecount)
-                raise err
-        try:
-            driver_config = config['driver']
-            if driver_config['type'] == "browser":
-                self.driver = drivers.browser.BrowserDriver(driver_config)
-            else:
-                raise NotImplementedError()
-        except KeyError:
-            print("ERROR: Driver configuration not found in config.yml!")
-            exit(1)
-        except Exception as err:
-            print("ERROR: Failed to initialize driver!")
-            raise err
-
-    def handle_reports(self):
-        """
-        Get reports from the driver, and judge and punish each one accordingly.
-        """
-        reports_to_check = self.driver.get_unresolved_report_ids()
-        for report_id in reports_to_check:
-            if report_id in self.handled_reports:
-                print("Report #%s skipped" % report_id)
-                continue
-            print("Handling report #%s..." % report_id)
-            report = self.driver.get_report(report_id)
-            (final_verdict, rules_broken) = self.judge.make_judgement(report)
-            if final_verdict:
-                self.driver.punish(report, final_verdict)
-                rules_broken_str = ', '.join(
-                    [str(rule) for rule in rules_broken])  # lol
-                note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
-            else:
-                note = "Ivory has scanned this report and found no infractions."
-            self.driver.add_note(report.report_id, note)
-
-    def run(self):
-        """
-        Runs the Ivory automoderator main loop.
-        """
-        while True:
-            print('Running report pass...')
-            try:
-                self.handle_reports()
-            except Exception as err:
-                print("Unexpected error handling reports!")
-                traceback.format_exc()
-            print('Report pass complete.')
-            time.sleep(self.wait_time)

@@ -9,6 +9,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+# NoElementFoundException, which we use to handle some potential fault areas
+from selenium.common.exceptions import NoSuchElementException
 # Ivory imports
 from core import Report, Driver, User
 
@@ -123,11 +125,16 @@ class BrowserDriver(Driver):
         reported_id = reported_row.get_attribute('href').split('/')[-1]
         reported_user = User(reported_id, reported_username)
         # Get reporter data
-        reporter_row = self.__driver.find_element_by_xpath(
-            '//table[1]//tr[2]/td[1]/a')
-        reporter_username = reporter_row.get_attribute('title')
-        reporter_id = reporter_row.get_attribute('href').split('/')[-1]
-        reporter_user = User(reporter_id, reporter_username)
+        try:
+            reporter_row = self.__driver.find_element_by_xpath(
+                '//table[1]//tr[2]/td[1]/a')
+            reporter_username = reporter_row.get_attribute('title')
+            reporter_id = reporter_row.get_attribute('href').split('/')[-1]
+            reporter_user = User(reporter_id, reporter_username)
+        except NoSuchElementException:
+            # If that block failed, then this was probably a federated report
+            # forwarded to us - set reporter_user to None
+            reporter_user = None
         # Get reporter's comment
         reporter_comment = self.__driver.find_element_by_class_name(
             'speech-bubble__bubble').text
@@ -166,7 +173,7 @@ class BrowserDriver(Driver):
         Punish a user.
         """
         if punishment.type == 'suspend':
-            self.suspend(report.id)
+            self.suspend(report.report_id)
         else:
             raise NotImplementedError()
 
@@ -177,7 +184,7 @@ class BrowserDriver(Driver):
         self.__driver.get(self.__url('/admin/reports/') + report_id)
         self.__wait.until(EC.title_contains('Report #'+report_id))
         self.__driver.find_element_by_xpath(
-            '//div[@class="content"]/div[1]/div[1]/a[2]').click()
+            '//div[@class="content"]/div[1]//a[text() = "Suspend"]').click()
         self.__wait.until(EC.title_contains('Perform moderation'))
         self.__driver.find_element_by_class_name('btn').click()
         self.__wait.until(EC.title_contains('Reports'))
