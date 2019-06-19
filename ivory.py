@@ -5,7 +5,6 @@ from typing import List
 
 import yaml
 
-import rules
 from core import Judge
 
 class Ivory:
@@ -50,14 +49,18 @@ class Ivory:
         try:
             driver_config = config['driver']
             # programmatically load driver based on type in config
-            Driver = import_module('drivers.' + driver_config['type']).driver
+            module_name = 'drivers.' + driver_config['type']
+            Driver = import_module(module_name).driver
             self.driver = Driver(driver_config)
         except KeyError:
             print("ERROR: Driver configuration not found in config.yml!")
             exit(1)
-        except ModuleNotFoundError:
-            print("ERROR: Driver not found!")
-            exit(1)
+        except ModuleNotFoundError as err:
+            if err.name == module_name:
+                print("ERROR: Driver not found!")
+                exit(1)
+            else:
+                raise err
         except Exception as err:
             print("ERROR: Failed to initialize driver!")
             raise err
