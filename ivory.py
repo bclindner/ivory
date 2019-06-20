@@ -101,6 +101,3 @@ class Ivory:
                     raise err
             print('Report pass complete.')
             time.sleep(self.wait_time)
-
-if __name__ == '__main__':
-    Ivory().run()
