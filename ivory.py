@@ -37,7 +37,7 @@ class Ivory:
             try:
                 # programmatically load rule based on type in config
                 rule_type = rule_config['type']
-                Rule = import_module('rules.' + rule_type).Rule
+                Rule = import_module('rules.' + rule_type).rule
                 self.judge.add_rule(Rule(rule_config))
                 rulecount += 1
             except ModuleNotFoundError:

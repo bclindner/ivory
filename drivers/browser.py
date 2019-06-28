@@ -139,6 +139,10 @@ class BrowserDriver(Driver):
         reporter_comment = self.__driver.find_element_by_class_name(
             'speech-bubble__bubble').text
         # Get reported posts
+        # Un-CW all posts for deserialization
+        cwposts = self.__driver.find_elements_by_tag_name('details')
+        for post in cwposts:
+            post.click()
         posts = self.__driver.find_elements_by_class_name('status__content')
         reported_posts = [post.text for post in posts]
         # Get links in reported posts
@@ -149,6 +153,7 @@ class BrowserDriver(Driver):
         # Turn it all into a Report object and send it back
         report = Report(report_id, report_status, reported_user,
                         reporter_user, reporter_comment, reported_posts, reported_links)
+        print(report.links)
         return report
 
     def add_note(self, report_id: str, message: str, resolve: bool = False):
