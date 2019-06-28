@@ -31,7 +31,7 @@ After that, create a config.yml in the project root as shown in the Configuring
 section below and then run:
 
 ```bash
-python ivory.py
+python .
 ```
 
 You will be asked for a username and password, and optionally an OTP if your
