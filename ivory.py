@@ -6,7 +6,9 @@ from typing import List
 import yaml
 
 from core import Judge
-from exceptions import DriverError, DriverAuthorizationError, DriverNetworkError
+from exceptions import ConfigurationError, DriverError, DriverAuthorizationError, DriverNetworkError
+
+MAX_RETRIES = 3
 
 class Ivory:
     """
@@ -62,8 +64,14 @@ class Ivory:
                 exit(1)
             else:
                 raise err
+        except ConfigurationError as err:
+            print("ERROR: Bad configuration:", err)
+            exit(1)
+        except DriverError as err:
+            print("ERROR while initializing driver:", err)
+            exit(1)
         except Exception as err:
-            print("ERROR: Failed to initialize driver!")
+            print("ERROR: Uncaught error while initializing driver!!")
             raise err
 
     def handle_reports(self):
