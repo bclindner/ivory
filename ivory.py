@@ -6,6 +6,7 @@ from typing import List
 import yaml
 
 from core import Judge
+from exceptions import DriverError, DriverAuthorizationError, DriverNetworkError
 
 class Ivory:
     """
@@ -74,19 +75,44 @@ class Ivory:
             if report_id in self.handled_reports:
                 print("Report #%s skipped" % report_id)
                 continue
-            print("Handling report #%s..." % report_id)
-            report = self.driver.get_report(report_id)
-            (final_verdict, rules_broken) = self.judge.make_judgement(report)
-            if final_verdict:
-                self.driver.punish(report, final_verdict)
-                rules_broken_str = ', '.join(
-                    [str(rule) for rule in rules_broken])  # lol
-                note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
-            else:
-                note = "Ivory has scanned this report and found no infractions."
-            self.driver.add_note(report.report_id, note)
-            self.handled_reports.append(report_id)
-
+            retries = 0
+            while True:
+                try:
+                    print("Handling report #%s..." % report_id)
+                    report = self.driver.get_report(report_id)
+                    (final_verdict, rules_broken) = self.judge.make_judgement(report)
+                    if final_verdict:
+                        self.driver.punish(report, final_verdict)
+                        rules_broken_str = ', '.join(
+                            [str(rule) for rule in rules_broken])  # lol
+                        note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
+                    else:
+                        note = "Ivory has scanned this report and found no infractions."
+                    self.driver.add_note(report.report_id, note)
+                    self.handled_reports.append(report_id)
+                # network error handling
+                except DriverNetworkError as err:
+                    retries += 1
+                    print("Encountered network error:", err)
+                    if retries < MAX_RETRIES:
+                        print("Retrying (attempt %d)..." % retries)
+                        continue
+                    else:
+                        print("Max retries hit; skipping...")
+                # driver error handling
+                except DriverAuthorizationError as err:
+                    print("Fatal authorization error:",err)
+                    print("Exiting...")
+                    exit(1)
+                except DriverError as err:
+                    print("Driver error handling report #"+report_id+":",err)
+                    print("Skipping...")
+                    break
+                # general exception catch
+                except Exception as err:
+                    print("Error handling report #"+report_id+":",err)
+                    print("Skipping...")
+                    break
     def run(self):
         """
         Runs the Ivory automoderator main loop.
