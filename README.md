@@ -108,5 +108,11 @@ Support for dry runs will come available when I get to it.
 This is currently solely maintained by me,
 [@bclindner@mastodon.technology](http://mastodon.technology/@bclindner).
 
+
+## Bugs & Contributing
+
 Contributions welcome. I'm a JS dev, not a Python one, so I may well need
 them.
+
+Got bugs or feature request? File them as a GitHub issue and I'll address them
+when I can. Same goes for PRs.
