@@ -24,7 +24,7 @@ class BrowserDriver(Driver):
     """
 
     def __init__(self, config):
-        Driver.__init__(self, config)
+        Driver.__init__(self)
         try:
             self.instance_url = config['instance_url']
         except KeyError:

@@ -78,7 +78,19 @@ class Ivory:
         """
         Get reports from the driver, and judge and punish each one accordingly.
         """
-        reports_to_check = self.driver.get_unresolved_report_ids()
+        retries = 0
+        while True:
+            try:
+                reports_to_check = self.driver.get_unresolved_report_ids()
+                break
+            except DriverNetworkError as err:
+                retries += 1
+                if retries < MAX_RETRIES:
+                    print("Failed to check reports - retrying...")
+                    continue
+                else:
+                    print("Failed to get reports:",err)
+                    break
         for report_id in reports_to_check:
             if report_id in self.handled_reports:
                 print("Report #%s skipped" % report_id)
@@ -115,12 +127,11 @@ class Ivory:
                 except DriverError as err:
                     print("Driver error handling report #"+report_id+":",err)
                     print("Skipping...")
-                    break
                 # general exception catch
                 except Exception as err:
                     print("Error handling report #"+report_id+":",err)
                     print("Skipping...")
-                    break
+                break
     def run(self):
         """
         Runs the Ivory automoderator main loop.
@@ -130,7 +141,7 @@ class Ivory:
             try:
                 self.handle_reports()
             except Exception as err:
-                print("Unexpected error handling reports!")
+                print("Unexpected error handling reports:",err)
                 if self.debug_mode:
                     raise err
             print('Report pass complete.')
