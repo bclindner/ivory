@@ -175,7 +175,6 @@ class BrowserDriver(Driver):
         # Turn it all into a Report object and send it back
         report = Report(report_id, report_status, reported_user,
                         reporter_user, reporter_comment, reported_posts, reported_links)
-        print(report.links)
         return report
 
     def add_note(self, report_id: str, message: str, resolve: bool = False):
