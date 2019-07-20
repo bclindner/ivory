@@ -1,6 +1,13 @@
 import re
 import requests
 from core import Rule, Report
+from constants import VERSION
+
+# HTTP headers for the LinkResolverRule.
+# Certain URL shorteners require us to set a valid non-generic user agent.
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 IvoryAutomod/" + VERSION
+}
 
 class LinkResolverRule(Rule):
     """
@@ -12,7 +19,7 @@ class LinkResolverRule(Rule):
         self.blocked = config['blocked']
     def test(self, report: Report):
         for link in report.links:
-            response = requests.head(link, allow_redirects=True)
+            response = requests.head(link, allow_redirects=True, headers=HEADERS)
             resolved_url = response.url
             for regex in self.blocked:
                 if re.search(regex, resolved_url):
