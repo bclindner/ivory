@@ -9,10 +9,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-# NoElementFoundException, which we use to handle some potential fault areas
-from selenium.common.exceptions import NoSuchElementException
+# Selenium exceptions which we use to handle some potential fault areas
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 # Ivory imports
 from core import Report, Driver, User
+from exceptions import ConfigurationError, DriverError, DriverNetworkError
 
 # Default timeout for the Selenium driver to get a Web page.
 DEFAULT_TIMEOUT = 30
@@ -27,8 +28,7 @@ class BrowserDriver(Driver):
         try:
             self.instance_url = config['instance_url']
         except KeyError:
-            print("ERROR: Instance URL not found in your config! Is it set correctly?")
-            exit(1)
+            raise ConfigurationError("instance_url not found")
         self.__driver = webdriver.Firefox()
         self.__wait = WebDriverWait(self.__driver, DEFAULT_TIMEOUT)
         # Attempt log-in
@@ -74,22 +74,37 @@ class BrowserDriver(Driver):
         list: A list of cookies in Selenium-consumable form.
         Save this and use it with login_with_cookies for future logins.
         """
-        self.__driver.get(self.__url('/auth/sign_in'))
-        # Email + Password
-        self.__driver.find_element_by_id("user_email").send_keys(email)
-        pwfield = self.__driver.find_element_by_id("user_password")
-        pwfield.send_keys(password)
-        pwfield.submit()
+        try:
+            self.__driver.get(self.__url('/auth/sign_in'))
+            # TODO add wait here for safety
+            # Email + Password
+            self.__driver.find_element_by_id("user_email").send_keys(email)
+            pwfield = self.__driver.find_element_by_id("user_password")
+            pwfield.send_keys(password)
+            pwfield.submit()
+        except TimeoutException:
+            raise DriverError("failed logging in - OTP page could not be reached")
+        except NoSuchElementException:
+            raise DriverError("failed to input login details - has this instance's login page been modified?")
+
         # OTP
         # TODO NON-OTP IS UNTESTED
         if otp:
             # Server needs a sec to catch up
-            self.__wait.until(EC.presence_of_element_located((By.ID, 'user_otp_attempt')))
-            otpfield = self.__driver.find_element_by_id('user_otp_attempt')
-            otpfield.send_keys(otp)
-            otpfield.submit()
+            try:
+                self.__wait.until(EC.presence_of_element_located((By.ID, 'user_otp_attempt')))
+                otpfield = self.__driver.find_element_by_id('user_otp_attempt')
+                otpfield.send_keys(otp)
+                otpfield.submit()
+            except TimeoutException:
+                raise DriverError("failed logging in - OTP page could not be reached")
+            except NoSuchElementException:
+                raise DriverError("failed to input and submit OTP code")
         # Server needs a sec to catch up
-        self.__wait.until(EC.url_contains('getting-started'))
+        try:
+            self.__wait.until(EC.url_contains('getting-started'))
+        except TimeoutException:
+            raise DriverError("failed logging in - homepage could not be reached")
         # Grab cookies
         cookies = self.__driver.get_cookies()
         return cookies
@@ -102,11 +117,15 @@ class BrowserDriver(Driver):
         it can. If you end up with more than a page of reports at a time, this
         driver might not work for you for now.
         """
-        self.__driver.get(self.__url('/admin/reports'))
-        self.__wait.until(EC.title_contains('Reports'))
-        links = self.__driver.find_elements_by_xpath(
-            '//div[@class="report-card__summary__item__content"]/a')
-        return [link.get_attribute('href').split('/')[-1] for link in links]
+        try:
+            self.__driver.get(self.__url('/admin/reports'))
+            self.__wait.until(EC.title_contains('Reports'))
+            link_elements = self.__driver.find_elements_by_xpath(
+                '//div[@class="report-card__summary__item__content"]/a')
+            links = [link.get_attribute('href').split('/')[-1] for link in link_elements]
+            return links
+        except TimeoutException:
+            raise DriverNetworkError("timed out navigating to reports page")
 
     def get_report(self, report_id: str):
         """
@@ -114,7 +133,10 @@ class BrowserDriver(Driver):
         """
         # Parse the report from the page itself
         self.__driver.get(self.__url('/admin/reports/') + report_id)
-        self.__wait.until(EC.title_contains('Report #'+report_id))
+        try:
+            self.__wait.until(EC.title_contains('Report #'+report_id))
+        except TimeoutException:
+            raise DriverNetworkError("timed out getting report #"+report_id)
         # Get report status
         report_status = self.__driver.find_element_by_xpath(
             '//table[1]//tr[5]/td[1]').text
@@ -153,7 +175,6 @@ class BrowserDriver(Driver):
         # Turn it all into a Report object and send it back
         report = Report(report_id, report_status, reported_user,
                         reporter_user, reporter_comment, reported_posts, reported_links)
-        print(report.links)
         return report
 
     def add_note(self, report_id: str, message: str, resolve: bool = False):
@@ -186,12 +207,20 @@ class BrowserDriver(Driver):
         """
         Suspends a user through the reports page directly.
         """
-        self.__driver.get(self.__url('/admin/reports/') + report_id)
-        self.__wait.until(EC.title_contains('Report #'+report_id))
-        self.__driver.find_element_by_xpath(
-            '//div[@class="content"]/div[1]//a[text() = "Suspend"]').click()
-        self.__wait.until(EC.title_contains('Perform moderation'))
-        self.__driver.find_element_by_class_name('btn').click()
-        self.__wait.until(EC.title_contains('Reports'))
+        try:
+            self.__driver.get(self.__url('/admin/reports/') + report_id)
+            self.__wait.until(EC.title_contains('Report #'+report_id))
+        except TimeoutException:
+            raise DriverNetworkError("failed to get report #"+report_id)
+        try:
+            self.__driver.find_element_by_xpath(
+                '//div[@class="content"]/div[1]//a[text() = "Suspend"]').click()
+            self.__wait.until(EC.title_contains('Perform moderation'))
+            self.__driver.find_element_by_class_name('btn').click()
+            self.__wait.until(EC.title_contains('Reports'))
+        except TimeoutException:
+            raise DriverNetworkError("timed out attempting to suspend user")
+        except NoSuchElementException:
+            raise DriverError("malformed page")
 
 driver = BrowserDriver

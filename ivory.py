@@ -6,6 +6,9 @@ from typing import List
 import yaml
 
 from core import Judge
+from exceptions import ConfigurationError, DriverError, DriverAuthorizationError, DriverNetworkError
+
+MAX_RETRIES = 3
 
 class Ivory:
     """
@@ -61,32 +64,74 @@ class Ivory:
                 exit(1)
             else:
                 raise err
+        except ConfigurationError as err:
+            print("ERROR: Bad configuration:", err)
+            exit(1)
+        except DriverError as err:
+            print("ERROR while initializing driver:", err)
+            exit(1)
         except Exception as err:
-            print("ERROR: Failed to initialize driver!")
+            print("ERROR: Uncaught error while initializing driver!!")
             raise err
 
     def handle_reports(self):
         """
         Get reports from the driver, and judge and punish each one accordingly.
         """
-        reports_to_check = self.driver.get_unresolved_report_ids()
+        retries = 0
+        while True:
+            try:
+                reports_to_check = self.driver.get_unresolved_report_ids()
+                break
+            except DriverNetworkError as err:
+                retries += 1
+                if retries < MAX_RETRIES:
+                    print("Failed to check reports - retrying...")
+                    continue
+                else:
+                    print("Failed to get reports:",err)
+                    break
         for report_id in reports_to_check:
             if report_id in self.handled_reports:
                 print("Report #%s skipped" % report_id)
                 continue
-            print("Handling report #%s..." % report_id)
-            report = self.driver.get_report(report_id)
-            (final_verdict, rules_broken) = self.judge.make_judgement(report)
-            if final_verdict:
-                self.driver.punish(report, final_verdict)
-                rules_broken_str = ', '.join(
-                    [str(rule) for rule in rules_broken])  # lol
-                note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
-            else:
-                note = "Ivory has scanned this report and found no infractions."
-            self.driver.add_note(report.report_id, note)
-            self.handled_reports.append(report_id)
-
+            retries = 0
+            while True:
+                try:
+                    print("Handling report #%s..." % report_id)
+                    report = self.driver.get_report(report_id)
+                    (final_verdict, rules_broken) = self.judge.make_judgement(report)
+                    if final_verdict:
+                        self.driver.punish(report, final_verdict)
+                        rules_broken_str = ', '.join(
+                            [str(rule) for rule in rules_broken])  # lol
+                        note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
+                    else:
+                        note = "Ivory has scanned this report and found no infractions."
+                    self.driver.add_note(report.report_id, note)
+                    self.handled_reports.append(report_id)
+                # network error handling
+                except DriverNetworkError as err:
+                    retries += 1
+                    print("Encountered network error:", err)
+                    if retries < MAX_RETRIES:
+                        print("Retrying (attempt %d)..." % retries)
+                        continue
+                    else:
+                        print("Max retries hit; skipping...")
+                # driver error handling
+                except DriverAuthorizationError as err:
+                    print("Fatal authorization error:",err)
+                    print("Exiting...")
+                    exit(1)
+                except DriverError as err:
+                    print("Driver error handling report #"+report_id+":",err)
+                    print("Skipping...")
+                # general exception catch
+                except Exception as err:
+                    print("Error handling report #"+report_id+":",err)
+                    print("Skipping...")
+                break
     def run(self):
         """
         Runs the Ivory automoderator main loop.
@@ -96,7 +141,7 @@ class Ivory:
             try:
                 self.handle_reports()
             except Exception as err:
-                print("Unexpected error handling reports!")
+                print("Unexpected error handling reports:",err)
                 if self.debug_mode:
                     raise err
             print('Report pass complete.')
