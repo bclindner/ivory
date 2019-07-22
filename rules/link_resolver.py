@@ -18,12 +18,13 @@ class LinkResolverRule(Rule):
         Rule.__init__(self, config)
         self.blocked = config['blocked']
     def test(self, report: Report):
-        for link in report.links:
-            response = requests.head(link, allow_redirects=True, headers=HEADERS)
-            resolved_url = response.url
-            for regex in self.blocked:
-                if re.search(regex, resolved_url):
-                    return True
+        for post in report.posts:
+            for link in post.links:
+                response = requests.head(link, allow_redirects=True, headers=HEADERS)
+                resolved_url = response.url
+                for regex in self.blocked:
+                    if re.search(regex, resolved_url):
+                        return True
         return False
 
 rule = LinkResolverRule

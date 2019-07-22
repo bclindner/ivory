@@ -12,10 +12,11 @@ class LinkContentRule(Rule):
         """
         Test if a post's links matches any of the given blocked regexes.
         """
-        for link in report.links:
-            for regex in self.blocked:
-                if re.search(regex, link):
-                    return True
+        for post in report.posts:
+            for link in post.links:
+                for regex in self.blocked:
+                    if re.search(regex, link):
+                        return True
         return False
 
 rule = LinkContentRule

@@ -2,6 +2,7 @@
 Base classes for the Ivory system.
 """
 from typing import List
+import datetime
 
 
 class User:
@@ -19,7 +20,22 @@ class User:
     def __str__(self):
         return self.username
 
-
+class Post:
+    """
+    A class representation of a Mastodon post.
+    """
+    def __init__(self,
+                 post_id: str,
+                 url: str,
+                 author: User,
+                 content: str,
+                 created_at: datetime.datetime):
+        self.post_id = post_id
+        self.url = url
+        self.author = author
+        self.content = content
+        self.created_at = created_at
+ 
 class Report:
     """
     A class representation of a Mastodon report.
@@ -34,7 +50,7 @@ class Report:
                  reported: User,
                  reporter: User,
                  report_comment: str,
-                 reported_posts: List[str],
+                 reported_posts: List[Post],
                  reported_links: List[str]):
         # ugh
         self.report_id = report_id
@@ -152,9 +168,6 @@ class Driver:
     For Ivory to work, all of the below base methods must be defined.
     """
 
-    def __init__(self):
-        pass
-
     def get_unresolved_report_ids(self):
         """
         Get a list of unresolved report IDs.
@@ -170,6 +183,9 @@ class Driver:
 
         The report ID is currently a string type as it will almost certainly be
         plugged into a URL or a REST API. This may change in future major versions.
+
+        Returns:
+        Report: A report. If a report cannot be returned, an error should be raised.
         """
         raise NotImplementedError()
 
@@ -189,4 +205,3 @@ class Driver:
         Add a note to a report by its ID.
         """
         raise NotImplementedError()
-

@@ -12,7 +12,7 @@ class MessageContentRule(Rule):
         """
         for post in report.posts:
             for regex in self.blocked:
-                if re.search(regex, post):
+                if re.search(regex, post.content):
                     return True
         return False
 

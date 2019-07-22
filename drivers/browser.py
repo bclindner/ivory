@@ -165,8 +165,10 @@ class BrowserDriver(Driver):
         cwposts = self.__driver.find_elements_by_tag_name('details')
         for post in cwposts:
             post.click()
-        posts = self.__driver.find_elements_by_class_name('status__content')
-        reported_posts = [post.text for post in posts]
+        # TODO convert each post into Post object and add it to reported_posts array
+        # posts = self.__driver.find_elements_by_class_name('status__content')
+        reported_posts = []
+        for post in posts:
         # Get links in reported posts
         links = self.__driver.find_elements_by_xpath(
             '//div[@class="status__content"]//a')
