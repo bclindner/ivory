@@ -2,6 +2,7 @@
 Base classes for the Ivory system.
 """
 from typing import List
+from exceptions import PunishmentNotImplementedError
 
 
 class User:
@@ -10,11 +11,11 @@ class User:
     """
 
     def __init__(self, user_id: str, username: str):
-        self.id = user_id
+        self.user_id = user_id
         self.username = username
 
     def __repr__(self):
-        return "User %s (@%s)" % (self.id, self.username)
+        return "User %s (@%s)" % (self.user_id, self.username)
 
     def __str__(self):
         return self.username
@@ -147,29 +148,32 @@ class Judge:
 
 class Driver:
     """
-    A dummy Ivory driver to derive your own custom drivers from.
+    The base Ivory driver to derive your own custom drivers from.
 
     For Ivory to work, all of the below base methods must be defined.
+
+    Ivory exceptions should be used here for all expected network and
+    configuration errors. Check any Driver implementation for a guide on
+    that.
     """
+
+    " List of punishments this driver supports.
+    " (The base Driver doesn't support any, so we just give an empty list.)
+    supported_punishments = []
 
     def __init__(self):
         pass
 
-    def get_unresolved_report_ids(self):
+    def get_reports(self, since_id: int):
         """
-        Get a list of unresolved report IDs.
+        Get a list of unresolved Report objects.
 
-        Returns:
-        list: An array of report ID strings.
-        """
-        raise NotImplementedError()
+        Use since_id to omit any projects after a given ID. Ivory will skip
+        any projects it has already handled regardless, so this information
+        is entirely for optimization - a Driver shouldn't get every
+        unresolved report if it doesn't need to.
 
-    def get_report(self, report_id: str):
-        """
-        Get a report by ID.
-
-        The report ID is currently a string type as it will almost certainly be
-        plugged into a URL or a REST API. This may change in future major versions.
+        Returns: list - A list of Report objects.
         """
         raise NotImplementedError()
 
@@ -179,12 +183,13 @@ class Driver:
 
         Driver classes should implement Punishments of type "suspend",
         "silence", and "warn", if possible.  If it isn't possible to implement
-        them, raise a NotImplementedError. You can define custom punishments,
-        but be wary of extending too much.
+        them, `raise PunishmentNotImplementedError(punishment.type)`.
+        
+        You can define custom punishments, but be wary of extending too much.
         """
         raise NotImplementedError()
-
-    def add_note(self, report_id: str, message: str, resolve: bool = False):
+    
+    def add_note(self, report: Report, message: str, resolve: bool = False):
         """
         Add a note to a report by its ID.
         """

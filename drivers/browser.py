@@ -22,7 +22,7 @@ class BrowserDriver(Driver):
     """
     A Selenium-based browser driver for Ivory.
     """
-
+    supported_punishments = ['suspend']
     def __init__(self, config):
         Driver.__init__(self)
         try:
@@ -109,7 +109,7 @@ class BrowserDriver(Driver):
         cookies = self.__driver.get_cookies()
         return cookies
 
-    def get_unresolved_report_ids(self):
+    def get_reports(self, since_id: int):
         """
         Scrapes the page to get unresolved reports.
 
@@ -117,17 +117,21 @@ class BrowserDriver(Driver):
         it can. If you end up with more than a page of reports at a time, this
         driver might not work for you for now.
         """
+        reports = []
         try:
             self.__driver.get(self.__url('/admin/reports'))
             self.__wait.until(EC.title_contains('Reports'))
             link_elements = self.__driver.find_elements_by_xpath(
                 '//div[@class="report-card__summary__item__content"]/a')
-            links = [link.get_attribute('href').split('/')[-1] for link in link_elements]
-            return links
+            report_ids = [int(link.get_attribute('href').split('/')[-1]) for link in link_elements]
+            for report_id in report_ids:
+                if report_id > since_id:
+                    reports.append(self.__get_report(report_id))
+            return reports
         except TimeoutException:
             raise DriverNetworkError("timed out navigating to reports page")
 
-    def get_report(self, report_id: str):
+    def __get_report(self, report_id: str):
         """
         Scrape the report page into a Report object.
         """
@@ -177,13 +181,12 @@ class BrowserDriver(Driver):
                         reporter_user, reporter_comment, reported_posts, reported_links)
         return report
 
-    def add_note(self, report_id: str, message: str, resolve: bool = False):
+    def add_note(self, report: Report, message: str, resolve: bool = False):
         """
         Adds a note through the reports page directly.
         """
-        # Parse the report from the page itself
-        self.__driver.get(self.__url('/admin/reports/') + report_id)
-        self.__wait.until(EC.title_contains('Report #'+report_id))
+        self.__driver.get(self.__url('/admin/reports/') + report.report_id)
+        self.__wait.until(EC.title_contains('Report #'+report.report_id))
         self.__driver.find_element_by_id(
             'report_note_content').send_keys(message)
         buttons = self.__driver.find_elements_by_class_name('btn')
@@ -199,11 +202,11 @@ class BrowserDriver(Driver):
         Punish a user.
         """
         if punishment.type == 'suspend':
-            self.suspend(report.report_id)
+            self._suspend(report.report_id)
         else:
-            raise NotImplementedError()
+            raise PunishmentNotImplementedError(punishment.type)
 
-    def suspend(self, report_id):
+    def _suspend(self, report_id):
         """
         Suspends a user through the reports page directly.
         """

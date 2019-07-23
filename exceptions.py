@@ -32,3 +32,8 @@ class RuleError(Exception):
     """
     Generic base exception for Rule problems.
     """
+
+class PunishmentNotImplementedError(NotImplementedError):
+    """
+    Exception for when a punishment type is not implemented by a Driver.
+    """

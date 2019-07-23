@@ -8,7 +8,8 @@ import yaml
 from core import Judge
 from exceptions import ConfigurationError, DriverError, DriverAuthorizationError, DriverNetworkError
 
-MAX_RETRIES = 3
+from constants import MAX_RETRIES
+
 
 class Ivory:
     """
@@ -140,9 +141,9 @@ class Ivory:
             print('Running report pass...')
             try:
                 self.handle_reports()
+                print('Report pass complete.')
             except Exception as err:
                 print("Unexpected error handling reports:",err)
                 if self.debug_mode:
                     raise err
-            print('Report pass complete.')
             time.sleep(self.wait_time)
