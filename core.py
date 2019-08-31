@@ -156,9 +156,10 @@ class Driver:
     configuration errors. Check any Driver implementation for a guide on
     that.
     """
-
-    " List of punishments this driver supports.
-    " (The base Driver doesn't support any, so we just give an empty list.)
+    """
+    List of punishments this driver supports.
+    (The base Driver doesn't support any, so we just give an empty list.)
+    """
     supported_punishments = []
 
     def __init__(self):
@@ -184,14 +185,13 @@ class Driver:
         Driver classes should implement Punishments of type "suspend",
         "silence", and "warn", if possible.  If it isn't possible to implement
         them, `raise PunishmentNotImplementedError(punishment.type)`.
-        
+
         You can define custom punishments, but be wary of extending too much.
         """
         raise NotImplementedError()
-    
+
     def add_note(self, report: Report, message: str, resolve: bool = False):
         """
         Add a note to a report by its ID.
         """
         raise NotImplementedError()
-
