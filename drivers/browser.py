@@ -102,7 +102,7 @@ class BrowserDriver(Driver):
                 raise DriverError("failed to input and submit OTP code")
         # Server needs a sec to catch up
         try:
-            self.__wait.until(EC.url_contains('getting-started'))
+            self.__wait.until(EC.url_contains('/web'))
         except TimeoutException:
             raise DriverError("failed logging in - homepage could not be reached")
         # Grab cookies
