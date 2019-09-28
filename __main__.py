@@ -9,13 +9,23 @@ config.json.
 import logging
 import sys
 import json
+import argparse
 from ivory import Ivory
+from constants import DEFAULT_CONFIG_PATH
+
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
+    argparser = argparse.ArgumentParser(
+        description="A Mastodon automoderator.")
+    argparser.add_argument("--config",
+                           dest="configpath",
+                           help="Path to the configuration file (default is config.json)",
+                           default=DEFAULT_CONFIG_PATH)
+    args = argparser.parse_args()
     try:
         # set up logging
         logging.basicConfig(stream=sys.stdout)
-        with open("config.json") as config_file:
+        with open(args.configpath) as config_file:
             config = json.load(config_file)
         logging.getLogger().setLevel(config.get('loglevel', logging.INFO))
         # start up ivory in watch mode
