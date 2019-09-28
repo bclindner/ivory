@@ -1,12 +1,12 @@
 import re
 
-from core import Rule, Report
+from judge import Rule
 
 class MessageContentRule(Rule):
     def __init__(self, config):
-        Rule.__init__(self, config)
+        Rule.__init__(self, **config)
         self.blocked = config['blocked']
-    def test(self, report: Report):
+    def test(self, report: dict):
         """
         Test if a post matches any of the given blocked regexes.
         """

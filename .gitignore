@@ -1,5 +1,6 @@
 # sensitive data
 config.yml
+config.json
 cookies.pickle
 # venv
 bin/

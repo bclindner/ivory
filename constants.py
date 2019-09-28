@@ -1,4 +1,9 @@
-# Ivory's current version
-VERSION = "0.2"
-# Maximum number of retries Ivory should make when attempting something
-MAX_RETRIES = 3
+"""
+Constants for Ivory.
+"""
+
+# Ivory version number
+VERSION = "v1.0.0"
+
+# Default amount of seconds to wait between report passes
+DEFAULT_WAIT_TIME = 300
