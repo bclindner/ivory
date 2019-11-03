@@ -4,6 +4,8 @@ from judge import Rule
 from constants import VERSION
 from util import parse_links_from_statuses
 
+from schemas import RegexBlockingRule
+
 # HTTP headers for the LinkResolverRule.
 # Certain URL shorteners require us to set a valid non-generic user agent.
 # Also, it's just good practice.
@@ -16,10 +18,11 @@ class LinkResolverRule(Rule):
     A rule which checks for banned links, resolving links to prevent shorturl
     mitigation.
     """
-    def __init__(self, config):
+    def __init__(self, raw_config):
+        config = RegexBlockingRule(raw_config)
         Rule.__init__(self, **config)
         self.blocked = config['blocked']
-    def test(self, report: dict):
+    def test_report(self, report: dict):
         for link in parse_links_from_statuses(report['statuses']):
             response = requests.head(link, allow_redirects=True, headers=HEADERS)
             resolved_url = response.url

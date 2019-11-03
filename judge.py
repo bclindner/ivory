@@ -27,19 +27,28 @@ class Punishment:
 
 class Rule:
     """
-    Rules in Ivory are kind of like unit tests for reports.
-    Each one can be run against a report to determine if it passes or fails.
+    Rules in Ivory are kind of like unit tests for the data the Judge screens.
+    Each one can be run against a data structure to determine if it passes or
+    fails.
     In this case, it differs in that a Rule comes with a Punishment.
     """
 
     def __init__(self, **config):
         self.name = config['name']
         self.punishment = Punishment(config['severity'], **config['punishment'])
+        self._logger = logging.getLogger(__name__)
 
-    def test(self, report: dict):
+    def test_report(self, report: dict):
         """
-        Test the rule against a given report dict.
+        Test a report.
         """
+        raise NotImplementedError()
+
+    def test_pending_account(self, account: dict):
+        """
+        Test a pending account.
+        """
+        raise NotImplementedError()
 
     def __str__(self):
         return self.name
@@ -50,15 +59,16 @@ class Rule:
 
 class Judge:
     """
-    Interface for judging reports based on rules.
+    Interface for judging data based on rules.
 
     The Judge class is a dead-simple class that holds Rule objects, and allows
-    you to test each Rule on a single Report object with the make_judgement
+    you to test each Rule on a single dict with the make_judgement
     method.
     """
-    rules = []
 
-    def __init__(self, rule_configs: List[dict] = None):
+    def __init__(self, judge_type: str, rule_configs: List[dict] = None):
+        self.judge_type = judge_type
+        self.rules = []
         if rule_configs is not None:
             self.load_rules(rule_configs)
 
@@ -87,7 +97,7 @@ class Judge:
                     "failed to initialize rule #%d", rulecount)
                 logger.critical("could not parse rules")
                 raise err
-            logger.info("loaded %d rules (%d total)", rulecount - 1, len(self.rules))
+            logger.info("%s judge loaded loaded %d rules (%d total)", self.judge_type, rulecount - 1, len(self.rules))
 
     def add_rule(self, rule):
         """
@@ -103,19 +113,37 @@ class Judge:
         """
         self.rules = []
 
-    def make_judgement(self, report: dict) -> (Punishment, List[Rule]):
+    def __test_rule(self, rule: Rule, data: dict):
         """
-        Judge a report.
+        Run the correct method in the Rule for testing.
+        TODO: This really doesn't feel like a good solution here, but it does
+        enable the rules to have a nice clean single-class system.
+        """
+        logger = logging.getLogger(__name__)
+        if self.judge_type == "report":
+            return rule.test_report(data)
+        elif self.judge_type == "pending_account":
+            return rule.test_pending_account(data)
+        else:
+            raise NotImplementedError()
+
+
+    def make_judgement(self, data: dict) -> (Punishment, List[Rule]):
+        """
+        Judge some data.
 
         Returns:
         final_verdict: Returns the Punishment object that should be used for
-        this report, or None if there is none.
+        this data, or None if there is none.
         rules_broken: The list of rules the judge determined were broken.
         """
+        logger = logging.getLogger(__name__)
         most_severe_rule = None
         rules_broken = set()
         for rule in self.rules:
-            if rule.test(report):
+            logger.debug("running rule %s", rule)
+            rule_was_broken = self.__test_rule(rule, data)
+            if rule_was_broken:
                 rules_broken.add(rule)
                 if (most_severe_rule is None or
                         most_severe_rule.punishment.severity < rule.punishment.severity):
@@ -125,3 +153,10 @@ class Judge:
         else:
             final_verdict = None
         return (final_verdict, rules_broken)
+
+class ReportJudge(Judge):
+    def __test_rule(self, rule: Rule, data: dict):
+        return rule.test_report(data)
+class PendingAccountJudge(Judge):
+    def __test_rule(self, rule: Rule, data: dict):
+        return rule.test_pending_account(data)

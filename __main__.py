@@ -29,7 +29,7 @@ if __name__ == "__main__":
             config = json.load(config_file)
         logging.getLogger().setLevel(config.get('loglevel', logging.INFO))
         # start up ivory in watch mode
-        Ivory(**config).watch()
+        Ivory(config).watch()
     except OSError as err:
         logger.exception("failed to load config file")
         exit(1)

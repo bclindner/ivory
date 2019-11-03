@@ -22,7 +22,6 @@ def parse_links_from_statuses(statuses: List[dict]):
     """
     links = []
     for status in statuses:
-        for text in status['content']:
-            for link in parse_links(text): # weee
-                links.append(link)
+        for link in parse_links(status['content']):
+            links.append(link)
     return links

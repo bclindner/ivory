@@ -6,7 +6,7 @@ class UsernameContentRule(Rule):
     def __init__(self, config):
         Rule.__init__(self, **config)
         self.blocked = config['blocked']
-    def test(self, report: dict):
+    def test_report(self, report: dict):
         """
         Test if the reported user matches any of the blocked regexes."
         """
