@@ -33,12 +33,12 @@ class Ivory():
         # **Load Judge and Rules**
         self._logger.info("parsing rules")
         if 'reports' in config:
-            self.report_judge = ReportJudge("report", config['reports'].get("rules"))
+            self.report_judge = ReportJudge(config['reports'].get("rules"))
         else:
             self._logger.debug("no report rules detected")
             self.report_judge = None
         if 'pendingAccounts' in config:
-            self.pending_account_judge = PendingAccountJudge("pending_account", config['pendingAccounts'].get("rules"))
+            self.pending_account_judge = PendingAccountJudge(config['pendingAccounts'].get("rules"))
         else:
             self._logger.debug("no pending account rules detected")
             self.pending_account_judge = None
