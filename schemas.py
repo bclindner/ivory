@@ -30,7 +30,8 @@ IvoryConfig = Schema({
     Required("token"): str,
     # I know I should be using Url() here but it didn't work and I'm tired
     Required("instanceURL"): str,
-    Required("waitTime"): int,
+    "waitTime": int,
+    "dryRun": bool,
     "logLevel": Any("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"),
     "reports": Reports,
     "pendingAccounts": PendingAccounts

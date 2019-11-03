@@ -67,6 +67,8 @@ class Ivory():
             self._logger.info(
                 "no waittime specified, defaulting to %d seconds", constants.DEFAULT_WAIT_TIME)
         self.wait_time = config.get("waitTime", constants.DEFAULT_WAIT_TIME)
+        self.dry_run = config.get('dryRun', False)
+
 
     def handle_unresolved_reports(self):
         """
@@ -110,6 +112,9 @@ class Ivory():
             self.punish(account['id'], punishment)
 
     def punish(self, account_id, punishment: Punishment, report_id=None):
+        if self.dry_run:
+            self._logger.info("ignoring punishment; in dry mode")
+            return
         maxtries = 3
         tries = 0
         while True:
