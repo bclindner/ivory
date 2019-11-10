@@ -14,26 +14,26 @@ class StopForumSpamRule(Rule):
     A rule which pings StopForumSpam's API to see if a user is a reported
     spammer.
     """
-    # Setting these as static to cache them among all the StopForumSpam rules
-    # hacky i guess but whatever
-    email_confidences = {}
-    tested_emails = set()
-    ip_confidences = {}
-    tested_ips = set()
     def __init__(self, raw_config):
         # Validate configuration
         config = Config(raw_config)
         Rule.__init__(self, **config)
+        # Caching for known emails/IPs
+        self.email_confidences = {}
+        self.tested_emails = set()
+        self.ip_confidences = {}
+        self.tested_ips = set()
         self.threshold = config['threshold']
 
-    def calc_confidence(self, email_confidence, ip_confidence):
+    def calc_confidence(self, ip_confidence, email_confidence):
         if not email_confidence and not ip_confidence:
             return False
-        if email_confidence and not ip_confidence:
-            return email_confidence > self.threshold
-        if ip_confidence and not email_confidence:
-            return ip_confidence > self.threshold
-        return max([email_confidence, ip_confidence]) > self.threshold
+        elif email_confidence and not ip_confidence:
+            return email_confidence >= self.threshold
+        elif ip_confidence and not email_confidence:
+            return ip_confidence >= self.threshold
+        else:
+            return max([email_confidence, ip_confidence]) >= self.threshold
 
     def test_pending_account(self, account: dict):
         """
@@ -47,7 +47,7 @@ class StopForumSpamRule(Rule):
         ip = account['ip']
         if email in self.tested_emails and ip in self.tested_ips:
             self._logger.debug("looks like we've already tested for this user and ip; recalculating to be sure")
-            judgement = self.calc_confidence(self.email_confidences.get(email), self.ip_confidences.get(ip))
+            judgement = self.calc_confidence(self.ip_confidences.get(ip), self.email_confidences.get(email))
             return judgement
 
         params = {
