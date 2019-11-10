@@ -11,11 +11,11 @@ class MessageContentRule(Rule):
         self.blocked = config['blocked']
     def test_report(self, report: dict):
         """
-        Test if a post matches any of the given blocked regexes.
+        Test if a status matches any of the given blocked regexes.
         """
-        for post in report.posts:
+        for status in report.get('statuses', []):
             for regex in self.blocked:
-                if re.search(regex, post):
+                if re.search(regex, status.get('content', '')):
                     return True
         return False
     def test_pending_account(self, account: dict):
