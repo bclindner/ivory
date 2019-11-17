@@ -98,7 +98,7 @@ A more comprehensive explanation of full list of rules can be found on the [wiki
 
 Ideally you only have to change this once in a blue moon, but if you do, you can
 use the `"dryRun": true` option to prevent Ivory from taking action, so you can
-test some rules on recent live reports.
+test some rules on recent live moderation queues.
 
 ### Running
 
@@ -113,16 +113,16 @@ python .
 
 Hopefully, no errors will be thrown and Ivory will start up and begin its first
 moderation pass, reading the first page of active reports and pending users and
-applying your set rules. Ivory will handle reports every 300 seconds, or 5
-minutes. (This is controlled by the `waitTime` part of the above config file -
-if you wanted 10 minutes, you could set it to 600!)
+applying your set rules. Ivory will handle these queues about every 300 seconds,
+or 5 minutes. (This is controlled by the `waitTime` part of the above config
+file - if you wanted 10 minutes, you could set it to 600!)
 
 ## Extending (custom rules)
 
 You'll notice the `rules/` folder is a flat folder of Python scripts, one per
 Ivory rule. If you've got a little Python experience, you can easily create your
 own rules by just dropping in a new Python file and using one of the other files
-in the folder as a jumping-off point. 
+in the folder as a jumping-off point.
 
 The reports and pending accounts that Ivory rules receive are the same as what
 Mastodon.py provides for
@@ -142,7 +142,7 @@ filename in your config:
     {
       "name": "An instance of my cool new rule",
       "type": "filename_of_your_rule",
-      "custom_option": true
+      "custom_option": true,
       "severity": 5,
       "punishment": {
         "type": "reject"
