@@ -21,15 +21,22 @@ if __name__ == "__main__":
                            dest="configpath",
                            help="Path to the configuration file (default is config.json)",
                            default=DEFAULT_CONFIG_PATH)
+    argparser.add_argument('command',
+                           help="Command to run (oneshot to run once, watch to run on a loop)",
+                           default="watch",
+                           nargs='?')
     args = argparser.parse_args()
     try:
         # set up logging
         logging.basicConfig(stream=sys.stdout)
         with open(args.configpath) as config_file:
             config = json.load(config_file)
-        logging.getLogger().setLevel(config.get('loglevel', logging.INFO))
+        logging.getLogger().setLevel(config.get('logLevel', logging.INFO))
         # start up ivory in watch mode
-        Ivory(config).watch()
+        if args.command == "watch":
+            Ivory(config).watch()
+        elif args.command == "oneshot":
+            Ivory(config).run()
     except OSError as err:
         logger.exception("failed to load config file")
         exit(1)

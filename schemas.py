@@ -1,3 +1,6 @@
+"""
+Config schemas used in Ivory and its rules.
+"""
 from voluptuous import Schema, Required, Any, Url, ALLOW_EXTRA
 import constants
 

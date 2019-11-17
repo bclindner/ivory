@@ -113,9 +113,18 @@ python .
 
 Hopefully, no errors will be thrown and Ivory will start up and begin its first
 moderation pass, reading the first page of active reports and pending users and
-applying your set rules. Ivory will handle these queues about every 300 seconds,
+applying your set rules. Ivory will handle these queues every 300 seconds,
 or 5 minutes. (This is controlled by the `waitTime` part of the above config
 file - if you wanted 10 minutes, you could set it to 600!)
+
+If you'd rather run it on some other schedule via a proper task scheduler like
+cron or a systemd .timer unit, you can use `python . oneshot` which will run
+Ivory only once. This sample cron line will run Ivory every 5 minutes and output
+to a log file:
+
+```cron
+*/5 * * * * cd /absolute/path/to/ivory; ./bin/python . oneshot >> ivory.log
+```
 
 ## Extending (custom rules)
 

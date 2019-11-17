@@ -3,7 +3,7 @@ Ivory core class file.
 Contains everything you need to run Ivory programmatically.
 """
 import logging
-from time import sleep  # for Ivory.watch()
+import time # for Ivory.watch()
 
 from mastodon import Mastodon, MastodonError, MastodonGatewayTimeoutError # API wrapper lib
 
@@ -156,6 +156,17 @@ class Ivory():
             except MastodonGatewayTimeoutError as err:
                 self._logger.warn("gateway timed out. ignoring for now, if that didn't do it we'll get it next pass...")
                 break
+    def run(self):
+        self._logger.info("starting moderation pass")
+        try:
+            if self.report_judge:
+                self.handle_unresolved_reports()
+            if self.pending_account_judge:
+                self.handle_pending_accounts()
+            self._logger.info("moderation pass complete")
+        except MastodonError:
+            self._logger.exception(
+                "enountered an API error. waiting %d seconds to try again", self.wait_time)
 
     def watch(self):
         """
@@ -163,14 +174,11 @@ class Ivory():
         the "waittime" field of the config.
         """
         while True:
-            self._logger.info("running watch pass")
-            try:
-                if self.report_judge:
-                    self.handle_unresolved_reports()
-                if self.pending_account_judge:
-                    self.handle_pending_accounts()
-                self._logger.info("watch pass complete, waiting for %d seconds", self.wait_time)
-            except MastodonError:
-                self._logger.exception(
-                    "enountered an API error. waiting %d seconds to try again", self.wait_time)
-            sleep(self.wait_time)
+            starttime = time.time()
+            self.run()
+            time_to_wait = self.wait_time - (time.time() - starttime)
+            if time_to_wait > 0:
+                self._logger.debug("waiting for %.4f seconds", time_to_wait)
+                time.sleep(time_to_wait)
+            else:
+                self._logger.warn("moderation pass took longer than waitTime - this will cause significant drift. you may want to increase waitTime")

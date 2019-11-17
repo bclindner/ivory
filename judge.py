@@ -1,5 +1,6 @@
 """
-Base classes used by the Ivory main class.
+The Judge system, which tests the reports and pending accounts Ivory feeds into
+it.
 """
 import logging # for logging in Judge
 from typing import List # type hinting for List

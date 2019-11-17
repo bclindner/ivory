@@ -11,5 +11,6 @@ lib64/
 pyvenv.cfg
 # log files
 geckodriver.log
+ivory.log
 # pycache
 *__pycache__*
