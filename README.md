@@ -2,8 +2,8 @@
 
 Ivory is an automoderator and anti-spam tool for Mastodon admins. It automates
 handling certain trivial reports and new user requests using *rules* -
-configurable tests for reports that check for bad words, malicious links, and
-more.
+configurable tests that check reports and pending users for bad usernames,
+malicious links, and more.
 
 ## Installation Guide
 
@@ -26,12 +26,14 @@ python -m pip install -r requirements.txt
 
 ### Configuration
 
-Before starting Ivory, you need to create a new application in the Mastodon
-frontend's settings. Don't worry about setting redirect URIs or anything that
-isn't required - just make sure you enable all of the admin: scopes. 
+Before starting Ivory, you need to create a new application in the Preferences
+menu. Don't worry about setting redirect URIs or anything that isn't required -
+just make sure you enable all of the `admin:` scopes. Once you've created the
+application, you'll want to grab its access token to place in the configuration
+file (example below).
 
-*Be* ***EXTREMELY*** *careful with the access token this generates - this key
-has a lot of power and in the wrong hands, this access key could mean someone
+*Be* ***EXTREMELY*** *careful with handling the access token this generates -
+this key has a lot of power and in the wrong hands, this could mean someone
 completely obliterating your instance.*
 
 Once you've done that, it's time to set up your config file. Configuring Ivory
@@ -48,7 +50,7 @@ is done with JSON; a sample is below:
         "name": "No spam links",
         "type": "link_resolver",
         "blocked": ["evilspam\\.website", "dontmarry\\.com"],
-        "severity": 1,
+        "severity": 2,
         "punishment": {
           "type": "suspend",
           "message": "Your account has been suspended for spamming."
@@ -92,10 +94,11 @@ is done with JSON; a sample is below:
 }
 ```
 
-A full list of rules can be found on the [wiki](#).
+A more comprehensive explanation of full list of rules can be found on the [wiki](#).
 
 Ideally you only have to change this once in a blue moon, but if you do, you can
-use the `"dryRun": true` option to prevent Ivory from actually taking action.
+use the `"dryRun": true` option to prevent Ivory from taking action, so you can
+test some rules on recent live reports.
 
 ### Running
 
@@ -110,13 +113,51 @@ python .
 
 Hopefully, no errors will be thrown and Ivory will start up and begin its first
 moderation pass, reading the first page of active reports and pending users and
-applying your set rules.
+applying your set rules. Ivory will handle reports every 300 seconds, or 5
+minutes. (This is controlled by the `waitTime` part of the above config file -
+if you wanted 10 minutes, you could set it to 600!)
 
-## Extending
+## Extending (custom rules)
 
 You'll notice the `rules/` folder is a flat folder of Python scripts, one per
-Ivory rule. You can easily create your own rules by just dropping in a new
-Python file and writing one similar to the others in the folder.
+Ivory rule. If you've got a little Python experience, you can easily create your
+own rules by just dropping in a new Python file and using one of the other files
+in the folder as a jumping-off point. 
+
+The reports and pending accounts that Ivory rules receive are the same as what
+Mastodon.py provides for
+[reports](https://mastodonpy.readthedocs.io/en/stable/#report-dicts) and [admin
+accounts](https://mastodonpy.readthedocs.io/en/stable/#admin-account-dicts),
+respectively.
+
+**Don't forget to use `dryRun` in your config when testing your new rule!**
+
+Once you've finished writing up your custom rule, you can address it by its
+filename in your config:
+
+```json
+...
+"pendingAccounts": {
+  "rules": [
+    {
+      "name": "An instance of my cool new rule",
+      "type": "filename_of_your_rule",
+      "custom_option": true
+      "severity": 5,
+      "punishment": {
+        "type": "reject"
+      }
+    },
+  ]
+}
+...
+```
+
+If you come up with any useful rules and wouldn't mind writing some tests for
+it, making a pull request to include it in Ivory's main release would be highly
+appreciated! The more rules Ivory gets, the more tools are collectively
+available to other admins for dealing with spammers and other threats to the
+Fediverse at large.
 
 ## Bugs & Contributing
 
