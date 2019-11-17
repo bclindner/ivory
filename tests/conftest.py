@@ -1,22 +1,17 @@
 import pytest
-import requests
 
 @pytest.fixture
-def requests_mock(monkeypatch):
+def MockResponse():
     """
-    Expose a way to mock the "requests" library to always return a given dict so that we can test inputs.
+    Returns an extendable class that resembles the Requests response class.
     """
-    class MockResponse:
-        def __init__(self, responsedict, **kwargs):
-            self.responsedict = responsedict
-            self.url = kwargs.get("url", "")
+    class _MockResponse:
+        def __init__(self, **kwargs):
+            self.jsonresponse = kwargs.get("json")
+            self.url = kwargs.get("url")
         def json(self):
-            return self.responsedict
-    def _requests_mock(method, responsedict, **kwargs):
-        def mock_method(*args, **unusedkwargs):
-            return MockResponse(responsedict, **kwargs)
-        monkeypatch.setattr(requests, method, mock_method)
-    return _requests_mock
+            return self.jsonresponse
+    return _MockResponse
 
 @pytest.fixture
 def account_field():

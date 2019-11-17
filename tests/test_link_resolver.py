@@ -1,5 +1,6 @@
 import pytest
 import voluptuous
+import requests
 from copy import deepcopy
 
 from rules.link_resolver import rule as Rule
@@ -19,6 +20,18 @@ ruleconfig = {
 def rule():
     return Rule(ruleconfig)
 
+@pytest.fixture
+def head_mock(MockResponse, monkeypatch):
+    def handler(url, *args, **kwargs):
+        respmap = {
+            "https://example.com/archive/notmaliciousatall/": "https://evilsi.te", # malicious site
+            "https://example.com/archive/definitelynotporn/": "https://heresa.porn.domain", # malicious site
+            "https://example.com/archive/actuallynotmalicious/": "https://example.com" # non-malicious site
+        }
+        return MockResponse(url=respmap[url])
+    monkeypatch.setattr(requests, "head", handler)
+
+
 def test_requires_blocked():
     bad_config = deepcopy(ruleconfig)
     bad_config.pop("blocked")
@@ -26,9 +39,9 @@ def test_requires_blocked():
     with pytest.raises(voluptuous.error.MultipleInvalid):
         Rule(bad_config)
 
-def test_evil_report(requests_mock, rule, report):
+def test_evil_report(head_mock, rule, report):
     # multiple statuses with one malicious
-    rpt = report(
+    rpt1 = report(
         statuses=[
             {
                 "content":
@@ -40,10 +53,18 @@ def test_evil_report(requests_mock, rule, report):
             }
         ]
     )
-    requests_mock("head", {}, url="https://heresa.porn.domain")
-    assert rule.test_report(rpt)
+    assert rule.test_report(rpt1)
+    rpt2 = report(
+        statuses=[
+            {
+                "content":
+                '<p>yeah uhh <a href="https://example.com/archive/definitelynotporn/">im up to no good lol</a></p>'
+            }
+        ]
+    )
+    assert rule.test_report(rpt2)
 
-def test_good_report(requests_mock, rule, report):
+def test_good_report(head_mock, rule, report):
     # multiple statuses with one malicious
     rpt = report(
         statuses=[
@@ -57,5 +78,4 @@ def test_good_report(requests_mock, rule, report):
             }
         ]
     )
-    requests_mock("head", {}, url="https://good.website")
     assert not rule.test_report(rpt)

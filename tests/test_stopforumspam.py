@@ -21,32 +21,37 @@ def rule():
     return Rule(ruleconfig)
 
 @pytest.fixture
-def sfs_mock(requests_mock):
+def sfs_response():
+    def _sfs_response(ip_conf=None, email_conf=None):
+        # The rule currently only uses confidence internally, but we
+        # simulate a full response just in case
+        resp = {
+            "success": 1,
+            "ip": {
+                "frequency": 10,
+                "appears": 1
+            },
+            "email": {
+                "frequency": 10,
+                "appears": 1
+            }
+        }
+        if ip_conf:
+            resp['ip']['confidence'] = ip_conf
+        if email_conf:
+            resp['email']['confidence'] = email_conf
+        return resp
+    return _sfs_response
+
+@pytest.fixture
+def sfs_mock(monkeypatch, MockResponse, sfs_response):
     """
     Expose a way to mock the "requests" library so that we can test inputs.
     """
-    def _sfs_mock(**mock_kwargs):
-            # The rule currently only uses confidence internally, but we
-            # simulate a full response just in case
-            ip = {
-                "frequency": 10,
-                "appears": 1
-            }
-            ip_conf = mock_kwargs.get('ip_confidence')
-            if ip_conf:
-                ip['confidence'] = ip_conf
-            email = {
-                "frequency": 10,
-                "appears": 1
-            }
-            email_conf = mock_kwargs.get('email_confidence')
-            if email_conf:
-                email['confidence'] = email_conf
-            requests_mock("get", {
-                "success": 1,
-                "ip": ip,
-                "email": email
-            })
+    def _sfs_mock(ip=None, email=None):
+        def handler(*args, **kwargs):
+            return MockResponse(json=sfs_response(ip, email))
+        monkeypatch.setattr(requests, "get", handler)
     return _sfs_mock
 
 def test_requires_threshold():
@@ -58,32 +63,32 @@ def test_requires_threshold():
 
 def test_evil_pending_account_iponly(rule, pending_account, sfs_mock):
     acct = pending_account()
-    sfs_mock(ip_confidence=90)
+    sfs_mock(ip=90)
     assert rule.test_pending_account(acct)
 
 def test_good_pending_account_iponly(rule, pending_account, sfs_mock):
     acct = pending_account()
     # probably not *actually* good but not confident enough for us to act on,
     # of course
-    sfs_mock(ip_confidence=89)
+    sfs_mock(ip=89)
     assert not rule.test_pending_account(acct)
 
 def test_evil_pending_account_emailonly(rule, pending_account, sfs_mock):
     acct = pending_account()
-    sfs_mock(email_confidence=90)
+    sfs_mock(email=90)
     assert rule.test_pending_account(acct)
 
 def test_good_pending_account_emailonly(rule, pending_account, sfs_mock):
     acct = pending_account()
-    sfs_mock(email_confidence=89)
+    sfs_mock(email=89)
     assert not rule.test_pending_account(acct)
 
 def test_evil_pending_account(rule, pending_account, sfs_mock):
     acct = pending_account()
-    sfs_mock(ip_confidence=85, email_confidence=99)
+    sfs_mock(ip=85, email=99)
     assert rule.test_pending_account(acct)
 
 def test_good_pending_account(rule, pending_account, sfs_mock):
     acct = pending_account()
-    sfs_mock(ip_confidence=80, email_confidence=89)
+    sfs_mock(ip=80, email=89)
     assert not rule.test_pending_account(acct)
