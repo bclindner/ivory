@@ -17,3 +17,7 @@ PUNISH_REJECT = "reject"
 PUNISH_DISABLE = "disable"
 PUNISH_SILENCE = "silence"
 PUNISH_SUSPEND = "suspend"
+
+# Command types
+COMMAND_WATCH = "watch"
+COMMAND_ONESHOT = "oneshot"
