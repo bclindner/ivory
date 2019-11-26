@@ -7,8 +7,9 @@ malicious links, and more.
 
 ## Installation Guide
 
-This installation guide assumes you know your way around a Linux terminal and
-maybe a little bit about common tech like Python and JSON formatting.
+This installation guide assumes you know your way around a Linux terminal,
+have Python and Git installed, and maybe a little bit about common tech like
+Python and JSON formatting.
 
 ### Installing
 
