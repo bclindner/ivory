@@ -51,7 +51,9 @@ class Ivory():
         )
         self._logger.debug("mastodon API wrapper initialized")
         # 2.9.1 required for moderation API
-        self._api.verify_minimum_version("2.9.1")
+        if not self._api.verify_minimum_version("2.9.1"):
+            self._logger.error("This instance is not updated to 2.9.1 - this version is required for the Moderation API %s", self._api.users_moderated)
+            exit(1)
         self._logger.debug("minimum version verified; should be ok")
         # grab some info which could be helpful here
         self.instance = self._api.instance()
@@ -126,28 +128,28 @@ class Ivory():
                         account_id,
                         None,
                         report_id,
-                        text=punishment.config.get('text')
+                        text=punishment.config.get('message')
                     )
                 elif punishment.type == constants.PUNISH_DISABLE:
                     self._api.admin_account_moderate(
                         account_id,
                         "disable",
                         report_id,
-                        text=punishment.config.get('text')
+                        text=punishment.config.get('message')
                     )
                 elif punishment.type == constants.PUNISH_SILENCE:
                     self._api.admin_account_moderate(
                         account_id,
                         "silence",
                         report_id,
-                        text=punishment.config.get('text')
+                        text=punishment.config.get('message')
                     )
                 elif punishment.type == constants.PUNISH_SUSPEND:
                     self._api.admin_account_moderate(
                         account_id,
                         "suspend",
                         report_id,
-                        text=punishment.config.get('text')
+                        text=punishment.config.get('message')
                     )
                 else:
                     # whoops

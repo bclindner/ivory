@@ -8,13 +8,13 @@ malicious links, and more.
 ## Installation Guide
 
 This installation guide assumes you know your way around a Linux terminal and
-know a little bit about common tech like Python and the `venv` package, and JSON
-formatting.
+maybe a little bit about common tech like Python and JSON formatting.
 
 ### Installing
 
-In a Linux terminal, the following command will clone and install Ivory to
-whichever folder you're in:
+
+In a Linux terminal, the following commands will clone and install Ivory to
+whichever folder you're in. Make sure you have Git and Python installed:
 
 ```bash
 git clone https://github.com/bclindner/ivory
@@ -22,6 +22,16 @@ cd ivory
 python -m venv .
 source bin/activate
 python -m pip install -r requirements.txt
+```
+
+This repo also comes with a Dockerfile, so if you want to deploy with that, that
+works too:
+
+```bash
+git clone https://github.com/bclindner/ivory
+cd ivory
+docker build -t ivory .
+docker run -v /srv/ivory/ivory_config.json:/app/config.json ivory
 ```
 
 ### Configuration
@@ -42,7 +52,7 @@ is done with JSON; a sample is below:
 ```json
 {
   "token": "<YOUR_ACCESS_TOKEN_HERE>",
-  "instanceURL": "<YOUR_INSTANCE_URL_HERE",
+  "instanceURL": "<YOUR_INSTANCE_URL_HERE>",
   "waitTime": 300,
   "reports": {
     "rules": [
@@ -62,8 +72,8 @@ is done with JSON; a sample is below:
         "blocked": ["sexie.ru"],
         "severity": 1,
         "punishment": {
-          "type": "suspend",
-          "message": "Your account has been suspended for spamming."
+          "type": "disable",
+          "message": "Your account has been disabled for spamming."
         }
       }
     ]
@@ -141,8 +151,9 @@ respectively.
 
 **Don't forget to use `dryRun` in your config when testing your new rule!**
 
-Once you've finished writing up your custom rule, you can address it by its
-filename in your config:
+Once you've finished writing up your custom rule, say as
+`rules/filename_of_your_rule.py`, you can address it by its filename in your
+config:
 
 ```json
 ...
@@ -162,11 +173,11 @@ filename in your config:
 ...
 ```
 
-If you come up with any useful rules and wouldn't mind writing some tests for
-it, making a pull request to include it in Ivory's main release would be highly
-appreciated! The more rules Ivory gets, the more tools are collectively
-available to other admins for dealing with spammers and other threats to the
-Fediverse at large.
+If you come up with any useful rules and wouldn't mind writing a schema and some
+tests for it, making a pull request to include it in Ivory's main release would
+be highly appreciated! The more rules Ivory gets, the more tools are
+collectively available to other admins for dealing with spammers and other
+threats to the Fediverse at large.
 
 ## Bugs & Contributing
 

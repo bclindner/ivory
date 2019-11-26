@@ -1,4 +1,14 @@
 import pytest
+import requests
+
+@pytest.fixture(autouse=True)
+def disable_requests(monkeypatch):
+    """
+    Prevent Requests from making any actual network requests.
+    (This also prevents Mastodon.py from doing anything, as it uses requests as
+    well.)
+    """
+    monkeypatch.delattr("requests.sessions.Session.request")
 
 @pytest.fixture
 def MockResponse():
