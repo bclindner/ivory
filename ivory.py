@@ -1,148 +1,186 @@
-from importlib import import_module
-import traceback
-import time
-from typing import List
+"""
+Ivory core class file.
+Contains everything you need to run Ivory programmatically.
+"""
+import logging
+import time # for Ivory.watch()
 
-import yaml
+from mastodon import Mastodon, MastodonError, MastodonGatewayTimeoutError # API wrapper lib
 
-from core import Judge
-from exceptions import ConfigurationError, DriverError, DriverAuthorizationError, DriverNetworkError
+import constants  # Ivory constants
+from judge import ReportJudge, PendingAccountJudge, Punishment  # Judge to integrate into Ivory
+from schemas import IvoryConfig
 
-MAX_RETRIES = 3
 
-class Ivory:
+class Ivory():
     """
-    The core class for the Ivory automoderation system.
-    In practice, you really only need to import this and a driver to get it
-    running.
+    The main Ivory class, which programmatically handles reports pulled from
+    the Mastodon API.
     """
-    handled_reports: List[str] = []
 
-    def __init__(self):
-        # get config file
-        try:
-            with open('config.yml') as config_file:
-                config = yaml.load(config_file, Loader=yaml.Loader)
-        except OSError:
-            print("Failed to open config.yml!")
-            exit(1)
-        self.debug_mode = config.get('debug_mode', False)
-        self.wait_time = config.get('wait_time', 300)
-        # parse rules first; fail early and all that
-        self.judge = Judge()
-        try:
-            rules_config = config['rules']
-        except KeyError:
-            print("ERROR: Couldn't find any rules in config.yml!")
-            exit(1)
-        rulecount = 1
-        for rule_config in rules_config:
-            try:
-                # programmatically load rule based on type in config
-                rule_type = rule_config['type']
-                Rule = import_module('rules.' + rule_type).rule
-                self.judge.add_rule(Rule(rule_config))
-                rulecount += 1
-            except ModuleNotFoundError:
-                print("ERROR: Rule #%d not found!" % rulecount)
-                exit(1)
-            except Exception as err:
-                print("Failed to initialize rule #%d!" % rulecount)
-                raise err
-        try:
-            driver_config = config['driver']
-            # programmatically load driver based on type in config
-            module_name = 'drivers.' + driver_config['type']
-            Driver = import_module(module_name).driver
-            self.driver = Driver(driver_config)
-        except KeyError:
-            print("ERROR: Driver configuration not found in config.yml!")
-            exit(1)
-        except ModuleNotFoundError as err:
-            if err.name == module_name:
-                print("ERROR: Driver not found!")
-                exit(1)
-            else:
-                raise err
-        except ConfigurationError as err:
-            print("ERROR: Bad configuration:", err)
-            exit(1)
-        except DriverError as err:
-            print("ERROR while initializing driver:", err)
-            exit(1)
-        except Exception as err:
-            print("ERROR: Uncaught error while initializing driver!!")
-            raise err
+    def __init__(self, raw_config):
+        """
+        Runs Ivory.
+        """
+        # **Validate the configuration**
+        config = IvoryConfig(raw_config)
 
-    def handle_reports(self):
+        # **Set up logger**
+        self._logger = logging.getLogger(__name__)
+
+        self._logger.info("Ivory version %s starting", constants.VERSION)
+
+        # **Load Judge and Rules**
+        self._logger.info("parsing rules")
+        if 'reports' in config:
+            self.report_judge = ReportJudge(config['reports'].get("rules"))
+        else:
+            self._logger.debug("no report rules detected")
+            self.report_judge = None
+        if 'pendingAccounts' in config:
+            self.pending_account_judge = PendingAccountJudge(config['pendingAccounts'].get("rules"))
+        else:
+            self._logger.debug("no pending account rules detected")
+            self.pending_account_judge = None
+
+
+        # **Initialize and verify API connectivity**
+        self._api = Mastodon(
+            access_token=config['token'],
+            api_base_url=config['instanceURL']
+        )
+        self._logger.debug("mastodon API wrapper initialized")
+        # 2.9.1 required for moderation API
+        if not self._api.verify_minimum_version("2.9.1"):
+            self._logger.error("This instance is not updated to 2.9.1 - this version is required for the Moderation API %s", self._api.users_moderated)
+            exit(1)
+        self._logger.debug("minimum version verified; should be ok")
+        # grab some info which could be helpful here
+        self.instance = self._api.instance()
+        self.user = self._api.account_verify_credentials()
+        # log a bunch of shit
+        self._logger.info("logged into %s as %s",
+                          self.instance['uri'], self.user['username'])
+        self._logger.debug("instance info: %s", self.instance)
+        self._logger.debug("user info: %s", self.user)
+
+        # **Set some variables from config**
+        if 'waitTime' not in config:
+            self._logger.info(
+                "no waittime specified, defaulting to %d seconds", constants.DEFAULT_WAIT_TIME)
+        self.wait_time = config.get("waitTime", constants.DEFAULT_WAIT_TIME)
+        self.dry_run = config.get('dryRun', False)
+
+
+    def handle_unresolved_reports(self):
         """
-        Get reports from the driver, and judge and punish each one accordingly.
+        Handles all unresolved reports.
         """
-        retries = 0
+        reports = self._api.admin_reports()
+        for report in reports:
+            self.handle_report(report)
+
+    def handle_report(self, report: dict):
+        """
+        Handles a single report.
+        """
+        self._logger.info("handling report #%d", report['id'])
+        (punishment, rules_broken) = self.report_judge.make_judgement(report)
+        if rules_broken:
+            self._logger.info("report breaks these rules: %s", rules_broken)
+        if punishment is not None:
+            self._logger.info("handling report with punishment %s", punishment)
+            self.punish(report['target_account']['id'], punishment, report['id'])
+
+    def handle_pending_accounts(self):
+        """
+        Handle all accounts in the pending account queue.
+        """
+        accounts = self._api.admin_accounts(status="pending")
+        for account in accounts:
+            self.handle_pending_account(account)
+
+    def handle_pending_account(self, account: dict):
+        """
+        Handle a single pending account.
+        """
+        self._logger.info("handling pending user %s", account['username'])
+        (punishment, rules_broken) = self.pending_account_judge.make_judgement(account)
+        if rules_broken:
+            self._logger.info("pending account breaks these rules: %s", rules_broken)
+        if punishment is not None:
+            self._logger.info("handling report with punishment %s", punishment)
+            self._logger.debug("punishment cfg: %s", punishment.config)
+            self.punish(account['id'], punishment)
+
+    def punish(self, account_id, punishment: Punishment, report_id=None):
+        if self.dry_run:
+            self._logger.info("ignoring punishment; in dry mode")
+            return
+        maxtries = 3
+        tries = 0
         while True:
             try:
-                reports_to_check = self.driver.get_unresolved_report_ids()
-                break
-            except DriverNetworkError as err:
-                retries += 1
-                if retries < MAX_RETRIES:
-                    print("Failed to check reports - retrying...")
-                    continue
+                if punishment.type == constants.PUNISH_REJECT:
+                    self._api.admin_account_reject(account_id)
+                elif punishment.type == constants.PUNISH_WARN:
+                    self._api.admin_account_moderate(
+                        account_id,
+                        None,
+                        report_id,
+                        text=punishment.config.get('message')
+                    )
+                elif punishment.type == constants.PUNISH_DISABLE:
+                    self._api.admin_account_moderate(
+                        account_id,
+                        "disable",
+                        report_id,
+                        text=punishment.config.get('message')
+                    )
+                elif punishment.type == constants.PUNISH_SILENCE:
+                    self._api.admin_account_moderate(
+                        account_id,
+                        "silence",
+                        report_id,
+                        text=punishment.config.get('message')
+                    )
+                elif punishment.type == constants.PUNISH_SUSPEND:
+                    self._api.admin_account_moderate(
+                        account_id,
+                        "suspend",
+                        report_id,
+                        text=punishment.config.get('message')
+                    )
                 else:
-                    print("Failed to get reports:",err)
-                    break
-        for report_id in reports_to_check:
-            if report_id in self.handled_reports:
-                print("Report #%s skipped" % report_id)
-                continue
-            retries = 0
-            while True:
-                try:
-                    print("Handling report #%s..." % report_id)
-                    report = self.driver.get_report(report_id)
-                    (final_verdict, rules_broken) = self.judge.make_judgement(report)
-                    if final_verdict:
-                        self.driver.punish(report, final_verdict)
-                        rules_broken_str = ', '.join(
-                            [str(rule) for rule in rules_broken])  # lol
-                        note = "Ivory has suspended this user for breaking rules: "+rules_broken_str
-                    else:
-                        note = "Ivory has scanned this report and found no infractions."
-                    self.driver.add_note(report.report_id, note)
-                    self.handled_reports.append(report_id)
-                # network error handling
-                except DriverNetworkError as err:
-                    retries += 1
-                    print("Encountered network error:", err)
-                    if retries < MAX_RETRIES:
-                        print("Retrying (attempt %d)..." % retries)
-                        continue
-                    else:
-                        print("Max retries hit; skipping...")
-                # driver error handling
-                except DriverAuthorizationError as err:
-                    print("Fatal authorization error:",err)
-                    print("Exiting...")
-                    exit(1)
-                except DriverError as err:
-                    print("Driver error handling report #"+report_id+":",err)
-                    print("Skipping...")
-                # general exception catch
-                except Exception as err:
-                    print("Error handling report #"+report_id+":",err)
-                    print("Skipping...")
+                    # whoops
+                    raise NotImplementedError()
+                break
+            except MastodonGatewayTimeoutError as err:
+                self._logger.warn("gateway timed out. ignoring for now, if that didn't do it we'll get it next pass...")
                 break
     def run(self):
+        self._logger.info("starting moderation pass")
+        try:
+            if self.report_judge:
+                self.handle_unresolved_reports()
+            if self.pending_account_judge:
+                self.handle_pending_accounts()
+            self._logger.info("moderation pass complete")
+        except MastodonError:
+            self._logger.exception(
+                "enountered an API error. waiting %d seconds to try again", self.wait_time)
+
+    def watch(self):
         """
-        Runs the Ivory automoderator main loop.
+        Runs handle_unresolved_reports() on a loop, with a delay specified in
+        the "waittime" field of the config.
         """
         while True:
-            print('Running report pass...')
-            try:
-                self.handle_reports()
-            except Exception as err:
-                print("Unexpected error handling reports:",err)
-                if self.debug_mode:
-                    raise err
-            print('Report pass complete.')
-            time.sleep(self.wait_time)
+            starttime = time.time()
+            self.run()
+            time_to_wait = self.wait_time - (time.time() - starttime)
+            if time_to_wait > 0:
+                self._logger.debug("waiting for %.4f seconds", time_to_wait)
+                time.sleep(time_to_wait)
+            else:
+                self._logger.warn("moderation pass took longer than waitTime - this will cause significant drift. you may want to increase waitTime")

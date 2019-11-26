@@ -1,5 +1,6 @@
 # sensitive data
 config.yml
+config.json
 cookies.pickle
 # venv
 bin/
@@ -10,5 +11,6 @@ lib64/
 pyvenv.cfg
 # log files
 geckodriver.log
+ivory.log
 # pycache
 *__pycache__*
