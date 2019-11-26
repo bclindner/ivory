@@ -4,7 +4,7 @@ Config schemas used in Ivory and its rules.
 from voluptuous import Schema, Required, Any, Url, ALLOW_EXTRA
 import constants
 
-Punishment = Schema({
+ReportPunishment = Schema({
     Required("type"): Any(
         constants.PUNISH_WARN,
         constants.PUNISH_REJECT,
@@ -14,19 +14,32 @@ Punishment = Schema({
     )
 }, extra=ALLOW_EXTRA)
 
+PendingAcctPunishment = Schema({
+    Required("type"): Any(
+        constants.PUNISH_REJECT
+    )
+}, extra=ALLOW_EXTRA)
+
 Rule = Schema({
     Required("name"): str,
     Required("type"): str,
     Required("severity"): int,
-    Required("punishment"): Punishment,
 }, extra=ALLOW_EXTRA)
 
+ReportRule = Rule.extend({
+    Required("punishment"): ReportPunishment
+})
+
+PendingAcctRule = Rule.extend({
+    Required("punishment"): PendingAcctPunishment
+})
+
 Reports = Schema({
-    Required("rules"): [Rule]
+    Required("rules"): [ReportRule]
 })
 
 PendingAccounts = Schema({
-    Required("rules"): [Rule]
+    Required("rules"): [PendingAcctRule]
 })
 
 IvoryConfig = Schema({
