@@ -104,7 +104,10 @@ is done with JSON; a sample is below:
 }
 ```
 
-A more comprehensive explanation of full list of rules can be found on the [wiki](#).
+A more [in-depth guide to Ivory configuration](https://github.com/bclindner/ivory/wiki/Getting-Started)
+and the list of [rules](https://github.com/bclindner/ivory/wiki/Rules) and
+[punishments](https://github.com/bclindner/ivory/wiki/Punishments)
+can be found on the wiki.
 
 Ideally you only have to change this once in a blue moon, but if you do, you can
 use the `"dryRun": true` option to prevent Ivory from taking action, so you can
