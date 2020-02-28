@@ -6,7 +6,7 @@ from rules.message_content import rule as Rule
 
 ruleconfig = {
     "name": "Test rule",
-    "type": "test_type",
+    "type": "message_content",
     # this second one will block "slur" but not "slurp".
     # just gotta be sure regex is working
     "blocked": ["badword", "slur[^p]"],
