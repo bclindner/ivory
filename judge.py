@@ -131,12 +131,15 @@ class Judge:
         rules_broken = set()
         for rule in self.rules:
             logger.debug("running rule %s", rule)
-            rule_was_broken = self.test_rule(rule, data)
-            if rule_was_broken:
-                rules_broken.add(rule)
-                if (most_severe_rule is None or
-                        most_severe_rule.punishment.severity < rule.punishment.severity):
-                    most_severe_rule = rule
+            try:
+                rule_was_broken = self.test_rule(rule, data)
+                if rule_was_broken:
+                    rules_broken.add(rule)
+                    if (most_severe_rule is None or
+                            most_severe_rule.punishment.severity < rule.punishment.severity):
+                        most_severe_rule = rule
+            except Exception:
+                logger.exception("rule failed; skipping")
         if most_severe_rule is not None:
             final_verdict = most_severe_rule.punishment
         else:
