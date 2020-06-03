@@ -26,7 +26,8 @@ class MessageContentRule(Rule):
         if 'invite_request' not in account:
             return False # can't violate this rule if you don't have a pending blurb :rollsafe:
         for regex in self.blocked:
-            if re.search(regex, str(account.get('invite_request'))):
+            content = account.get("invite_request") or ""
+            if re.search(regex, str(content)):
                 return True
         return False
 
