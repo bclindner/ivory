@@ -88,6 +88,28 @@ def pending_account(account):
         }
     return _pending_account
 
+@pytest.fixture
+def pending_account_no_invite(account):
+    def _pending_account_no_invite(**kwargs):
+        return {
+            "id": kwargs.get("account_id", "1"),
+            "username": kwargs.get("username", "fakeuser"),
+            "domain": None,
+            "created_at": "2019-01-01T00:00:00.000Z",
+            "email": kwargs.get("email", "testuser@example.com"),
+            "ip": kwargs.get("ip", "127.0.0.1"),
+            "role": "user",
+            "confirmed": True,
+            "suspended": False,
+            "silenced": False,
+            "disabled": False,
+            "approved": False,
+            "locale": "en",
+            "invite_request": None,
+            "account": account(**kwargs.get("account", {}))
+        }
+    return _pending_account_no_invite
+
 
 @pytest.fixture
 def admin_account(account):
