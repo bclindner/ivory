@@ -29,11 +29,11 @@ class StopForumSpamRule(Rule):
         if not email_confidence and not ip_confidence:
             return False
         elif email_confidence and not ip_confidence:
-            return email_confidence >= self.threshold
+            return float(email_confidence) >= self.threshold
         elif ip_confidence and not email_confidence:
-            return ip_confidence >= self.threshold
+            return float(ip_confidence) >= self.threshold
         else:
-            return max([email_confidence, ip_confidence]) >= self.threshold
+            return max([float(email_confidence), float(ip_confidence)]) >= self.threshold
 
     def test_pending_account(self, account: dict):
         """
@@ -57,6 +57,7 @@ class StopForumSpamRule(Rule):
         }
         resp = requests.get("https://api.stopforumspam.org/api", params=params)
         results = resp.json()
+        print(results)
 
         ip_confidence = results.get('ip').get('confidence')
         email_confidence = results.get('email').get('confidence')

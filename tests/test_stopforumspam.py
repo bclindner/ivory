@@ -92,3 +92,13 @@ def test_good_pending_account(rule, pending_account, sfs_mock):
     acct = pending_account()
     sfs_mock(ip=80, email=89)
     assert not rule.test_pending_account(acct)
+
+def test_evil_pending_account_string_confidence(rule, pending_account, sfs_mock):
+    acct = pending_account()
+    sfs_mock(ip=80, email="99")
+    assert rule.test_pending_account(acct)
+
+def testgood_pending_account_string_confidence(rule, pending_account, sfs_mock):
+    acct = pending_account()
+    sfs_mock(ip=80, email="1.00")
+    assert not rule.test_pending_account(acct)
