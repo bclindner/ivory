@@ -105,6 +105,15 @@ class Ivory():
         Handle a single pending account.
         """
         self._logger.info("handling pending user %s", account['username'])
+
+        # The Mastodon API changed the return value for IP addresses from
+        # a string to a dict in 3.5
+        # if self._api.verify_minimum_version("3.5.0"):
+        if not isinstance(account['ip'], str):
+            new_ip = account['ip']['ip']
+            del account['ip']
+            account['ip'] = new_ip
+
         (punishment, rules_broken) = self.pending_account_judge.make_judgement(account)
         if rules_broken:
             self._logger.info("pending account breaks these rules: %s", rules_broken)
